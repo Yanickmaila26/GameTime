@@ -42,6 +42,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,directiv
     Route::post('/campeonatos', [ChampionshipController::class, 'store']);
     Route::put('/campeonatos/{championship}', [ChampionshipController::class, 'update']);
     Route::delete('/campeonatos/{championship}', [ChampionshipController::class, 'destroy']);
+    Route::post('/campeonatos/{championship}/generar-playoffs', [ChampionshipController::class, 'generatePlayoffsFromGroup']);
+    Route::post('/campeonatos/{championship}/avanzar-ronda', [ChampionshipController::class, 'advanceKnockout']);
+    Route::post('/campeonatos/{championship}/partido-manual', [ChampionshipController::class, 'addManualMatch']);
 
     // Partidos
     Route::get('/partidos', [MatchController::class, 'index'])->name('matches');

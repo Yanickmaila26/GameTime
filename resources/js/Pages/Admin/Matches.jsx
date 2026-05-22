@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useForm, Link } from '@inertiajs/react'
 import AdminLayout from '../../Components/AdminLayout'
 import { Swords, Plus, Trash2, Edit2, X, Sparkles, Play, Calendar } from 'lucide-react'
+import { TeamLogo } from './Teams'
+import { confirmDelete } from '../../lib/swal'
 
 const STATUS_LABEL = { scheduled: 'Programado', live: 'En Vivo', finished: 'Finalizado' }
 const STATUS_COLOR = {
@@ -76,9 +78,9 @@ export default function Matches({ matches, championships, teams, referees }) {
   const [modal, setModal] = useState(null)
   const { delete: destroy } = useForm()
 
-  const deleteMatch = (id) => {
-    if (!confirm('¿Eliminar partido?')) return
-    destroy(`/admin/partidos/${id}`)
+  const deleteMatch = async (id) => {
+    const result = await confirmDelete('¿Eliminar partido?', 'Se perderán todos los datos del partido.')
+    if (result.isConfirmed) destroy(`/admin/partidos/${id}`)
   }
 
   return (
@@ -103,22 +105,24 @@ export default function Matches({ matches, championships, teams, referees }) {
             <div key={match.id} className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4 hover:border-[#333] transition-all">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="text-center">
-                    <p className="text-xs font-bold text-white">{match.home_team?.short_name}</p>
+                  <div className="text-center flex flex-col items-center">
+                    <TeamLogo team={match.home_team} className="w-8 h-8 mb-1" />
+                    <p className="text-[10px] font-bold text-gray-400">{match.home_team?.short_name}</p>
                     {match.status !== 'scheduled' && (
-                      <p className="text-xl font-black text-white">{match.home_score}</p>
+                      <p className="text-lg font-black text-white mt-0.5">{match.home_score}</p>
                     )}
                   </div>
-                  <div className="text-center px-3">
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${STATUS_COLOR[match.status]}`}>
+                  <div className="text-center px-2">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_COLOR[match.status]}`}>
                       {STATUS_LABEL[match.status]}
                     </span>
-                    <p className="text-[10px] text-gray-600 mt-1">VS</p>
+                    <p className="text-[10px] text-gray-600 mt-1 font-bold">VS</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-xs font-bold text-white">{match.away_team?.short_name}</p>
+                  <div className="text-center flex flex-col items-center">
+                    <TeamLogo team={match.away_team} className="w-8 h-8 mb-1" />
+                    <p className="text-[10px] font-bold text-gray-400">{match.away_team?.short_name}</p>
                     {match.status !== 'scheduled' && (
-                      <p className="text-xl font-black text-white">{match.away_score}</p>
+                      <p className="text-lg font-black text-white mt-0.5">{match.away_score}</p>
                     )}
                   </div>
                   <div className="ml-4 hidden sm:block">

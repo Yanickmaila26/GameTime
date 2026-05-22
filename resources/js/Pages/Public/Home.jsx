@@ -1,6 +1,22 @@
 import { useState } from 'react'
 import { Trophy, Swords, BarChart2, Users } from 'lucide-react'
 
+function TeamLogo({ team, className = "w-10 h-10", showText = true }) {
+  if (!team) return null
+  if (team.logo_url) {
+    return <img src={team.logo_url} alt={team.name} className={`${className} rounded-xl object-cover flex-shrink-0`} />
+  }
+  const isHex = team.logo_color?.startsWith('#')
+  return (
+    <div 
+      style={isHex ? { backgroundColor: team.logo_color } : {}}
+      className={`${className} ${!isHex ? `bg-gradient-to-br ${team.logo_color}` : ''} rounded-xl flex items-center justify-center font-black text-black text-xs flex-shrink-0`}
+    >
+      {showText ? team.short_name : ''}
+    </div>
+  )
+}
+
 const TABS = [
   { id: 'standings', label: 'Tabla', icon: Trophy },
   { id: 'live', label: 'En Vivo', icon: Swords },
@@ -41,9 +57,7 @@ function LiveMatchCard({ match }) {
       </div>
       <div className="flex items-center justify-between">
         <div className="text-center flex-1">
-          <div className={`w-10 h-10 bg-gradient-to-br ${match.home_team?.logo_color} rounded-xl flex items-center justify-center font-black text-black text-xs mx-auto mb-1`}>
-            {match.home_team?.short_name}
-          </div>
+          <TeamLogo team={match.home_team} className="w-10 h-10 mx-auto mb-1" />
           <p className="text-[10px] text-white font-bold truncate">{match.home_team?.name}</p>
         </div>
         <div className="text-center px-4">
@@ -54,9 +68,7 @@ function LiveMatchCard({ match }) {
           </div>
         </div>
         <div className="text-center flex-1">
-          <div className={`w-10 h-10 bg-gradient-to-br ${match.away_team?.logo_color} rounded-xl flex items-center justify-center font-black text-black text-xs mx-auto mb-1`}>
-            {match.away_team?.short_name}
-          </div>
+          <TeamLogo team={match.away_team} className="w-10 h-10 mx-auto mb-1" />
           <p className="text-[10px] text-white font-bold truncate">{match.away_team?.name}</p>
         </div>
       </div>
@@ -90,7 +102,7 @@ function StandingsTab({ championship }) {
                 <td className="px-4 py-3 font-black text-white">{i + 1}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center space-x-2">
-                    <div className={`w-6 h-6 bg-gradient-to-br ${team.logo_color} rounded-lg`} />
+                    <TeamLogo team={team} className="w-6 h-6" showText={false} />
                     <span className="font-bold text-white">{team.name}</span>
                   </div>
                 </td>
@@ -160,19 +172,22 @@ export default function Home({ championship, liveMatches, recentMatches }) {
             <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest">Resultados Recientes</h2>
             {recentMatches.map(match => (
               <div key={match.id} className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-bold text-blue-400">Finalizado</span>
+                  {match.label && <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider">{match.label}</span>}
                 </div>
-                <div className="flex items-center justify-between mt-2">
-                  <div className="text-center flex-1">
+                <div className="flex items-center justify-between">
+                  <div className="text-center flex-1 flex flex-col items-center">
+                    <TeamLogo team={match.home_team} className="w-8 h-8 mb-1" showText={false} />
                     <p className="text-xs font-bold text-white">{match.home_team?.short_name}</p>
                   </div>
                   <div className="flex items-center space-x-2 px-4">
-                    <span className="text-2xl font-black text-white">{match.home_score}</span>
+                    <span className={`text-2xl font-black ${match.home_score > match.away_score ? 'text-white' : 'text-gray-500'}`}>{match.home_score}</span>
                     <span className="text-gray-600">–</span>
-                    <span className="text-2xl font-black text-white">{match.away_score}</span>
+                    <span className={`text-2xl font-black ${match.away_score > match.home_score ? 'text-white' : 'text-gray-500'}`}>{match.away_score}</span>
                   </div>
-                  <div className="text-center flex-1">
+                  <div className="text-center flex-1 flex flex-col items-center">
+                    <TeamLogo team={match.away_team} className="w-8 h-8 mb-1" showText={false} />
                     <p className="text-xs font-bold text-white">{match.away_team?.short_name}</p>
                   </div>
                 </div>

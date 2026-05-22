@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, router, usePage } from '@inertiajs/react'
 import { LayoutDashboard, Users, UserCheck, Trophy, Swords, LogOut, Menu, X, ArrowLeft, User } from 'lucide-react'
+import { toastSuccess, toastError } from '../lib/swal'
 
 const menuItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -49,9 +50,15 @@ function UserCard({ user }) {
 }
 
 export default function AdminLayout({ title, children }) {
-  const { auth } = usePage().props
+  const { auth, flash } = usePage().props
   const user = auth.user
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  // Show server flash messages as Swal toasts
+  useEffect(() => {
+    if (flash?.success) toastSuccess(flash.success)
+    if (flash?.error)   toastError(flash.error)
+  }, [flash])
 
   const handleLogout = () => router.post('/logout')
 
@@ -109,10 +116,13 @@ export default function AdminLayout({ title, children }) {
       {/* Main Content */}
       <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         <div className="max-w-7xl mx-auto mb-6 flex justify-between items-center">
-          <Link href="/" className="inline-flex items-center space-x-2 text-xs font-bold text-gray-400 hover:text-white transition-colors">
+          <a
+            href="/"
+            className="inline-flex items-center space-x-2 text-xs font-bold text-gray-400 hover:text-white transition-colors"
+          >
             <ArrowLeft className="w-4 h-4" />
             <span>Vista pública</span>
-          </Link>
+          </a>
           {title && <span className="text-xs font-mono text-gray-500">{title}</span>}
         </div>
         <div className="max-w-7xl mx-auto">{children}</div>

@@ -1,7 +1,6 @@
-const CACHE_NAME = 'gametime-cache-v3';
+const CACHE_NAME = 'gametime-cache-v4';
 const urlsToCache = [
   '/',
-  '/index.html',
   '/manifest.json',
   '/pwa-icon-512.png'
 ];

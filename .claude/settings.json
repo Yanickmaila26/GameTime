@@ -8,7 +8,9 @@
       "Bash(php artisan *)",
       "Bash(npm run *)",
       "Bash(rm -rf C:/laragon/www/gametime_scaffold && echo \"Temp directory removed\")",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git rm *)"
     ],
     "additionalDirectories": [
       "C:\\laragon\\www\\gametime\\database\\migrations",

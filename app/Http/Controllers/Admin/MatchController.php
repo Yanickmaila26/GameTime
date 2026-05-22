@@ -212,6 +212,9 @@ class MatchController extends Controller
 
     private function updateStandings(Game $match): void
     {
+        if ($match->stage !== 'group') {
+            return;
+        }
         $homeWon = $match->home_score > $match->away_score;
         $diff = $match->home_score - $match->away_score;
 

@@ -24,6 +24,7 @@ class TeamController extends Controller
             'gender' => 'required|in:masculino,femenino,mixto',
             'short_name' => 'required|string|max:5',
             'logo_color' => 'nullable|string|max:100',
+            'logo_url' => 'nullable|string',
         ]);
 
         Team::create($data);
@@ -38,6 +39,7 @@ class TeamController extends Controller
             'gender' => 'required|in:masculino,femenino,mixto',
             'short_name' => 'required|string|max:5',
             'logo_color' => 'nullable|string|max:100',
+            'logo_url' => 'nullable|string',
             'active' => 'boolean',
         ]);
 
@@ -62,6 +64,10 @@ class TeamController extends Controller
             'status' => 'in:activo,lesionado,suspendido',
         ]);
 
+        if ($team->gender !== 'mixto' && $data['gender'] !== $team->gender) {
+            return back()->withErrors(['gender' => "El género del jugador debe coincidir con la categoría del equipo ({$team->gender})."]);
+        }
+
         $team->players()->create($data);
 
         return back()->with('success', 'Jugador agregado.');
@@ -76,6 +82,10 @@ class TeamController extends Controller
             'gender' => 'required|in:masculino,femenino',
             'status' => 'in:activo,lesionado,suspendido',
         ]);
+
+        if ($team->gender !== 'mixto' && $data['gender'] !== $team->gender) {
+            return back()->withErrors(['gender' => "El género del jugador debe coincidir con la categoría del equipo ({$team->gender})."]);
+        }
 
         $player->update($data);
 
