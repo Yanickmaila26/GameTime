@@ -10,7 +10,11 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        User::firstOrCreate(
+        $this->call([
+            RoleAndPermissionSeeder::class,
+        ]);
+
+        $admin = User::firstOrCreate(
             ['email' => 'admin@gametime.ec'],
             [
                 'name' => 'Administrador',
@@ -19,8 +23,9 @@ class DatabaseSeeder extends Seeder
                 'active' => true,
             ]
         );
+        $admin->assignRole('admin');
 
-        User::firstOrCreate(
+        $directiva = User::firstOrCreate(
             ['email' => 'directiva@gametime.ec'],
             [
                 'name' => 'Directiva',
@@ -29,5 +34,6 @@ class DatabaseSeeder extends Seeder
                 'active' => true,
             ]
         );
+        $directiva->assignRole('directiva');
     }
 }
