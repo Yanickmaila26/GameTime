@@ -70,8 +70,8 @@ class MatchController extends Controller
     public function live(Game $match)
     {
         $match->load([
-            'homeTeam.players',
-            'awayTeam.players',
+            'homeTeam.players' => fn($q) => $q->orderBy('number'),
+            'awayTeam.players' => fn($q) => $q->orderBy('number'),
             'players.player',
             'events',
             'championship',
@@ -80,6 +80,130 @@ class MatchController extends Controller
         return Inertia::render('Admin/MatchLive', [
             'match' => $match,
         ]);
+    }
+
+    /**
+     * Batch-save all events accumulated during a quarter.
+     * This is the only endpoint called during live play — avoids page reload on every action.
+     */
+    public function saveBatch(Request $request, Game $match)
+    {
+        $data = $request->validate([
+            'quarter'          => 'required|integer|min:1|max:4',
+            'events'           => 'array',
+            'events.*.type'    => 'required|in:score,foul',
+            'events.*.team'    => 'required|in:home,away',
+            'events.*.player_id' => 'nullable|exists:players,id',
+            'events.*.value'   => 'required|integer|min:1|max:3',
+            'advance_quarter'  => 'boolean',
+            'finish'           => 'boolean',
+        ]);
+
+        \DB::transaction(function () use ($data, $match) {
+            $homeScore   = 0;
+            $awayScore   = 0;
+            $homeFouls   = 0;
+            $awayFouls   = 0;
+
+            foreach ($data['events'] ?? [] as $event) {
+                $isHome  = $event['team'] === 'home';
+                $teamId  = $isHome ? $match->home_team_id : $match->away_team_id;
+
+                if ($event['type'] === 'score') {
+                    $isHome ? ($homeScore += $event['value']) : ($awayScore += $event['value']);
+
+                    if ($event['player_id']) {
+                        MatchPlayer::updateOrCreate(
+                            ['match_id' => $match->id, 'player_id' => $event['player_id']],
+                            ['team_id'  => $teamId]
+                        );
+                        MatchPlayer::where('match_id', $match->id)
+                            ->where('player_id', $event['player_id'])
+                            ->increment('points', $event['value']);
+                    }
+
+                    MatchEvent::create([
+                        'match_id'             => $match->id,
+                        'quarter'              => $data['quarter'],
+                        'type'                 => 'score' . $event['value'],
+                        'team_id'              => $teamId,
+                        'player_id'            => $event['player_id'],
+                        'home_score_snapshot'  => $match->home_score + $homeScore,
+                        'away_score_snapshot'  => $match->away_score + $awayScore,
+                    ]);
+                } elseif ($event['type'] === 'foul') {
+                    $isHome ? $homeFouls++ : $awayFouls++;
+
+                    if ($event['player_id']) {
+                        MatchPlayer::updateOrCreate(
+                            ['match_id' => $match->id, 'player_id' => $event['player_id']],
+                            ['team_id'  => $teamId]
+                        );
+                        MatchPlayer::where('match_id', $match->id)
+                            ->where('player_id', $event['player_id'])
+                            ->increment('fouls');
+                    }
+
+                    $newHomeFouls = ($match->home_fouls_q + $homeFouls);
+                    $newAwayFouls = ($match->away_fouls_q + $awayFouls);
+                    $foulsForTeam = $isHome ? $newHomeFouls : $newAwayFouls;
+
+                    MatchEvent::create([
+                        'match_id'  => $match->id,
+                        'quarter'   => $data['quarter'],
+                        'type'      => $foulsForTeam >= 5 ? 'foul_bonus' : 'foul',
+                        'team_id'   => $teamId,
+                        'player_id' => $event['player_id'],
+                    ]);
+                }
+            }
+
+            // Persist accumulated scores and fouls to DB
+            $match->increment('home_score', $homeScore);
+            $match->increment('away_score', $awayScore);
+            $match->increment('home_fouls_q', $homeFouls);
+            $match->increment('away_fouls_q', $awayFouls);
+            $match->refresh();
+
+            // Advance quarter
+            if (!empty($data['advance_quarter']) && $match->current_quarter < 4) {
+                $nextQ = $match->current_quarter + 1;
+                $match->update([
+                    'current_quarter' => $nextQ,
+                    'home_fouls_q'    => 0,
+                    'away_fouls_q'    => 0,
+                ]);
+                MatchEvent::create([
+                    'match_id'    => $match->id,
+                    'quarter'     => $nextQ,
+                    'type'        => 'quarter_end',
+                    'description' => "Cuarto {$nextQ} iniciado",
+                ]);
+            }
+
+            // Finish match
+            if (!empty($data['finish'])) {
+                $match->update([
+                    'status'      => 'finished',
+                    'finished_at' => now(),
+                ]);
+                MatchEvent::create([
+                    'match_id'             => $match->id,
+                    'quarter'              => $match->current_quarter,
+                    'type'                 => 'match_end',
+                    'home_score_snapshot'  => $match->home_score,
+                    'away_score_snapshot'  => $match->away_score,
+                    'description'          => 'Partido finalizado',
+                ]);
+                $this->updateStandings($match);
+            }
+        });
+
+        if (!empty($data['finish'])) {
+            return redirect()->route('admin.matches')->with('success', 'Partido finalizado.');
+        }
+
+        return back()->with('success', 'Cuarto guardado.');
     }
 
     public function start(Game $match)

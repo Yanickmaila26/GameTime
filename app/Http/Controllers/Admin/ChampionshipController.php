@@ -94,8 +94,17 @@ class ChampionshipController extends Controller
 
     private function generateInitialMatches(Championship $championship)
     {
-        $teams     = $championship->teams()->get()->shuffle()->all();
+        $teams     = $championship->teams()->with('players')->get()->shuffle()->all();
         $teamCount = count($teams);
+
+        // Validate every team has at least 2 active players
+        $invalidTeams = collect($teams)->filter(fn($t) => $t->players->count() < 2);
+        if ($invalidTeams->isNotEmpty()) {
+            // Revert to draft so the user can fix it
+            $championship->update(['status' => 'draft']);
+            $names = $invalidTeams->pluck('name')->join(', ');
+            abort(422, "Los siguientes equipos tienen menos de 2 jugadores: {$names}. Agrega jugadores antes de iniciar.");
+        }
 
         // --- Build an ordered list of scheduled dates ---
         $scheduledDates = $this->buildScheduleDates(

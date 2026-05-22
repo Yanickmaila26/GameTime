@@ -13,12 +13,28 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        $user = auth()->user();
+
+        // ── Panel Directiva ─────────────────────────────────────────────────────
+        if ($user->role === 'directiva') {
+            $championship = Championship::with([
+                'teams' => fn($q) => $q->orderByPivot('pts', 'desc'),
+                'matches.homeTeam',
+                'matches.awayTeam',
+            ])->latest()->first();
+
+            return Inertia::render('Admin/DirectivaDashboard', [
+                'championship' => $championship,
+            ]);
+        }
+
+        // ── Panel Admin ─────────────────────────────────────────────────────────
         return Inertia::render('Admin/Dashboard', [
             'stats' => [
-                'teams' => Team::where('active', true)->count(),
-                'players' => Player::count(),
+                'teams'         => Team::where('active', true)->count(),
+                'players'       => Player::count(),
                 'championships' => Championship::count(),
-                'liveMatches' => Game::where('status', 'live')->count(),
+                'liveMatches'   => Game::where('status', 'live')->count(),
             ],
             'liveMatches' => Game::where('status', 'live')
                 ->with(['homeTeam', 'awayTeam', 'championship'])
