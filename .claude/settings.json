@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(composer install *)",
+      "Bash(composer require *)",
+      "Bash(rm C:/laragon/www/gametime/database/migrations/*.php 2>/dev/null; echo \"Cleaned default migrations\")",
+      "Bash(npm install *)",
+      "Bash(php artisan *)",
+      "Bash(npm run *)",
+      "Bash(rm -rf C:/laragon/www/gametime_scaffold && echo \"Temp directory removed\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git rm *)"
+    ],
+    "additionalDirectories": [
+      "C:\\laragon\\www\\gametime\\database\\migrations",
+      "C:\\laragon\\www\\gametime_scaffold"
+    ]
+  }
+}
