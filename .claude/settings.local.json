@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la \"c:\\\\laragon\\\\www\\\\gametime\\\\\" | head -30)",
+      "Read(//c/laragon/www/**)"
+    ]
+  }
+}

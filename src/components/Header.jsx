@@ -12,10 +12,10 @@ export default function Header({ liveCount }) {
         </div>
         <div>
           <span className="font-extrabold text-lg tracking-wider text-white">
-            HOOP<span className="text-basketball">CENTER</span>
+            GAME<span className="text-basketball">TIME</span>
           </span>
           <span className="block text-[9px] text-gray-500 font-bold uppercase tracking-widest leading-none">
-            Invierno Quito 2026
+            Pifo 2026
           </span>
         </div>
       </div>
