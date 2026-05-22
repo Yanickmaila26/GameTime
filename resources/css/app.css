@@ -1,0 +1,22 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.jsx';
+
+@theme {
+  --color-basketball-500: #f97316;
+  --color-basketball-600: #ea580c;
+  --color-basketball-700: #c2410c;
+  --color-electric-500: #3b82f6;
+  --color-electric-600: #2563eb;
+  --color-darkbg-50: #1e293b;
+  --color-darkbg-100: #0f172a;
+  --color-darkbg-200: #020617;
+}
+
+body {
+  background-color: #0f172a;
+  color: #f8fafc;
+}

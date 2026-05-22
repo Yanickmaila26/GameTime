@@ -2,7 +2,31 @@
   "permissions": {
     "allow": [
       "Bash(ls -la \"c:\\\\laragon\\\\www\\\\gametime\\\\\" | head -30)",
-      "Read(//c/laragon/www/**)"
+      "Read(//c/laragon/www/**)",
+      "Bash(Get-ChildItem -Path \"c:\\\\laragon\\\\www\\\\gametime\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(composer --version)",
+      "Bash(php --version)",
+      "Bash(git checkout *)",
+      "Bash(composer create-project *)",
+      "Bash(Test-Path C:\\\\laragon\\\\www\\\\gametime_scaffold\\\\artisan)",
+      "Bash(cp -r C:/laragon/www/gametime_scaffold/app C:/laragon/www/gametime/)",
+      "Bash(cp -r C:/laragon/www/gametime_scaffold/bootstrap C:/laragon/www/gametime/)",
+      "Bash(cp -r C:/laragon/www/gametime_scaffold/config C:/laragon/www/gametime/)",
+      "Bash(cp -r C:/laragon/www/gametime_scaffold/routes C:/laragon/www/gametime/)",
+      "Bash(cp -r C:/laragon/www/gametime_scaffold/storage C:/laragon/www/gametime/)",
+      "Bash(cp C:/laragon/www/gametime_scaffold/artisan C:/laragon/www/gametime/)",
+      "Bash(cp C:/laragon/www/gametime_scaffold/server.php C:/laragon/www/gametime/)",
+      "Bash(cp C:/laragon/www/gametime_scaffold/composer.json C:/laragon/www/gametime/)",
+      "Bash(cp C:/laragon/www/gametime_scaffold/composer.lock C:/laragon/www/gametime/)",
+      "Bash(cp C:/laragon/www/gametime_scaffold/.env.example C:/laragon/www/gametime/)",
+      "Bash(cp C:/laragon/www/gametime_scaffold/.env C:/laragon/www/gametime/)",
+      "Bash(cp C:/laragon/www/gametime_scaffold/public/index.php C:/laragon/www/gametime/public/)",
+      "Bash(cp C:/laragon/www/gametime_scaffold/public/.htaccess C:/laragon/www/gametime/public/)",
+      "Bash(cp -r C:/laragon/www/gametime_scaffold/database/migrations C:/laragon/www/gametime/database/)",
+      "Bash(cp -r C:/laragon/www/gametime_scaffold/database/factories C:/laragon/www/gametime/database/)",
+      "Bash(cp -r C:/laragon/www/gametime_scaffold/database/seeders C:/laragon/www/gametime/database/)"
     ]
   }
 }
