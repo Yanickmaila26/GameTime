@@ -6,49 +6,110 @@
 @source '../**/*.jsx';
 
 @theme {
-  --color-basketball: #F57C00;
-  --color-basketball-light: #FFB74D;
-  --color-basketball-dark: #E65100;
-  --color-basketball-glow: rgba(245, 124, 0, 0.15);
+  --color-basketball-light: #F47C1C;
+  --color-basketball: #E05A17;
+  --color-basketball-dark: #A93B16;
+  --color-basketball-glow: rgba(224, 90, 23, 0.15);
   
-  --color-electric: #1976D2;
   --color-electric-light: #64B5F6;
+  --color-electric: #1976D2;
   --color-electric-dark: #0D47A1;
   --color-electric-glow: rgba(25, 118, 210, 0.15);
 
-  --color-darkbg: #02040b;
+  /*--color-darkbg: #02040b;
   --color-darkbg-card: #0c0d16;
   --color-darkbg-lighter: #121422;
-  --color-darkbg-border: #1a1e35;
+  --color-darkbg-border: #1a1e35; */
+  
+  --color-gold: #E5A823;
+  --color-steel: #4A607A;
+  --color-steel-light: #6F88A5;
+  
+  --color-darkbg: #060B14;
+  --color-darkbg-card: #0A111F;
+  --color-darkbg-lighter: #121B2D;
+  --color-darkbg-border: #1B283F;
 
   --font-sans: 'Outfit', 'Inter', sans-serif;
   
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+@utility glass-card {
+  background-color: rgba(13, 13, 13, 0.75);
+  backdrop-filter: blur(16px);
+  border: 1px solid #1a1a1a;
+}
+
+@utility glass-card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  &:hover {
+    background-color: rgba(18, 18, 18, 0.8);
+    border-color: #262626;
+  }
+}
+
+@utility glow-orange {
+  box-shadow: 0 0 20px rgba(245, 124, 0, 0.25);
+}
+
+@utility glow-blue {
+  box-shadow: 0 0 20px rgba(25, 118, 210, 0.25);
+}
+
+@utility glow-orange-border {
+  box-shadow: 0 0 0 1px rgba(245, 124, 0, 0.4), 0 0 15px rgba(245, 124, 0, 0.15);
+}
+
+@utility glow-blue-border {
+  box-shadow: 0 0 0 1px rgba(25, 118, 210, 0.4), 0 0 15px rgba(25, 118, 210, 0.15);
+}
+
+@utility animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px; /* Offset for desktop sticky navbar */
+}
+
 body {
-  background-color: #02040b;
+ /* background-color: #02040b;*/
+  background-color: #060B14;
   color: #f3f4f6;
-  font-family: var(--font-sans);
+  font-family: 'Outfit', 'Inter', sans-serif;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(at 50% 0%, rgba(224, 90, 23, 0.05) 0px, transparent 65%),
+    radial-gradient(at 0% 100%, rgba(74, 96, 122, 0.04) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(229, 168, 35, 0.03) 0px, transparent 50%);
+  background-attachment: fixed;
 }
 
-/* Custom styles for logo marquee */
-.marquee-inner {
-  display: flex;
-  width: max-content;
-  animation: marqueeScroll linear infinite;
+/* Scrollbar customizations */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #02040a;
+}
+::-webkit-scrollbar-thumb {
+  background: #0f172a;
+  border: 2px solid #02040a;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #F57C00;
 }
 
-@keyframes marqueeScroll {
-  0% {
-    transform: translateX(0%);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-/* Hide scrollbars but keep functionality */
+/* Hide scrollbar utility for horizontal scroll items */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
@@ -57,3 +118,7 @@ body {
   scrollbar-width: none;
 }
 
+/* Touch highlight reset */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
