@@ -44,9 +44,9 @@ function ProtectedRoute({ children }) {
 // Real team logo mappings
 const realTeams = [
   { id: 'cbi', name: 'CBI Latacunga', logo: '/CBI.jpeg' },
-  { id: 'om', name: 'OM Basketball', logo: '/OM_basketball.jpeg' },
+  { id: 'om', name: 'OM Basketball', logo: '/OM_basketball.PNG' },
   { id: 'ambato', name: 'Ambato City', logo: '/ambato_city.png' },
-  { id: 'canutos', name: 'Canutos BC', logo: '/canutos.jpeg' },
+  { id: 'canutos', name: 'Canutos BC', logo: '/canutos.PNG' },
   { id: 'cotopaxi', name: 'Cotopaxi Élite', logo: '/cotopaxi_elite.jpeg' },
   { id: 'drackar', name: 'Drackar Club', logo: '/drackar.jpeg' },
   { id: 'fenix', name: 'Fénix BC', logo: '/fenix_bc.jpeg' },
