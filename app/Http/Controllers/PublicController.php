@@ -16,6 +16,8 @@ class PublicController extends Controller
                 'teams' => function ($q) {
                     $q->orderByPivot('pts', 'desc');
                 },
+                'teams.players.matchStats',
+                'teams.media',
                 'matches.homeTeam.players',
                 'matches.awayTeam.players',
                 'matches.players.player',
@@ -111,15 +113,18 @@ class PublicController extends Controller
             })
             ->values();
 
-        return Inertia::render('Public/Home', [
+        $generalMedia = \App\Models\Multimedia::whereNull('team_id')->latest()->get();
+
+        return response()->json([
             'championship' => $activeChampionship,
             'liveMatches' => $liveMatches,
             'recentMatches' => $recentMatches,
             'teams' => $teams,
+            'generalMedia' => $generalMedia,
             'leaders' => [
                 'scorers' => $scorers,
                 'threepointers' => $threepointers,
-                'rebounders' => $fouls,
+                'foulers' => $fouls,
             ]
         ]);
     }

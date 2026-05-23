@@ -208,19 +208,23 @@ function ChampionshipModal({ championship, teams, onClose }) {
         <form onSubmit={submit} className="space-y-4">
 
           {/* Nombre */}
-          <div>
-            <input value={data.name} onChange={e => setData('name', e.target.value)} placeholder="Nombre del campeonato" required
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">🏆 Nombre del Campeonato</label>
+            <input value={data.name} onChange={e => setData('name', e.target.value)} placeholder="Ej: Torneo de Invierno Latacunga 2026" required
               className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500" />
             {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name}</p>}
           </div>
 
           {/* Género */}
-          <select value={data.gender} onChange={e => setData(d => ({ ...d, gender: e.target.value, team_ids: [] }))}
-            className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none">
-            <option value="masculino">Masculino</option>
-            <option value="femenino">Femenino</option>
-            <option value="mixto">Mixto</option>
-          </select>
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">⚥ Categoría del Campeonato</label>
+            <select value={data.gender} onChange={e => setData(d => ({ ...d, gender: e.target.value, team_ids: [] }))}
+              className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none">
+              <option value="masculino">Masculino</option>
+              <option value="femenino">Femenino</option>
+              <option value="mixto">Mixto (combinado)</option>
+            </select>
+          </div>
 
           {/* Tipo de campeonato (solo al crear) */}
           {!championship && (
@@ -336,27 +340,51 @@ function ManualMatchModal({ championship, onClose }) {
         </div>
         <form onSubmit={submit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <select value={data.home_team_id} onChange={e => setData('home_team_id', e.target.value)} required className={selectClass}>
-              <option value="">Equipo Local</option>
-              {championship.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-            <select value={data.away_team_id} onChange={e => setData('away_team_id', e.target.value)} required className={selectClass}>
-              <option value="">Equipo Visitante</option>
-              {championship.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">🏠 Equipo Local</label>
+              <select value={data.home_team_id} onChange={e => setData('home_team_id', e.target.value)} required className={selectClass}>
+                <option value="">Seleccionar equipo local...</option>
+                {championship.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">✈ Equipo Visitante</label>
+              <select value={data.away_team_id} onChange={e => setData('away_team_id', e.target.value)} required className={selectClass}>
+                <option value="">Seleccionar equipo visitante...</option>
+                {championship.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <select value={data.stage} onChange={e => setData('stage', e.target.value)} className={selectClass}>
-              <option value="group">Fase de Grupos</option>
-              <option value="playoff">Playoffs (Eliminatoria)</option>
-            </select>
-            <input value={data.label} onChange={e => setData('label', e.target.value)} placeholder="Etiqueta (ej: Semifinal)" className={inputClass} />
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">🎭 Fase del partido</label>
+              <select value={data.stage} onChange={e => setData('stage', e.target.value)} className={selectClass}>
+                <option value="group">Fase de Grupos</option>
+                <option value="playoff">Playoffs (Eliminatoria)</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">🏷 Etiqueta <span className="normal-case text-gray-600 font-normal">(ej: Semifinal)</span></label>
+              <input value={data.label} onChange={e => setData('label', e.target.value)} placeholder="Ej: Final, Semifinal" className={inputClass} />
+            </div>
           </div>
 
-          <input value={data.court} onChange={e => setData('court', e.target.value)} placeholder="Cancha" className={inputClass} />
-          <input value={data.scheduled_at} onChange={e => setData('scheduled_at', e.target.value)} type="datetime-local" className={inputClass} />
-          <input value={data.round} onChange={e => setData('round', +e.target.value)} type="number" min={1} placeholder="Jornada/Ronda" className={inputClass} />
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">📍 Cancha / Lugar del partido</label>
+            <input value={data.court} onChange={e => setData('court', e.target.value)} placeholder="Ej: Coliseo Municipal" className={inputClass} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">📅 Fecha y hora programada</label>
+              <input value={data.scheduled_at} onChange={e => setData('scheduled_at', e.target.value)} type="datetime-local" className={inputClass} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">🔢 Número de Jornada / Ronda</label>
+              <input value={data.round} onChange={e => setData('round', +e.target.value)} type="number" min={1} placeholder="Ej: 1" className={inputClass} />
+            </div>
+          </div>
 
           <button type="submit" disabled={processing}
             className="w-full py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-black font-bold text-sm rounded-2xl disabled:opacity-50">

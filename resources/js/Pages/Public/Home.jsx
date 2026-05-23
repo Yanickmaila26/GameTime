@@ -18,17 +18,17 @@ import {
 const mockLeaders = {
   scorers: [
     { id: 1, name: 'Juan Pérez', team: 'Los Halcones', ppg: 24.5, matches: 5, avatar: 'JP', position: 'Alero' },
-    { id: 2, name: 'Carlos Mendoza', team: 'Spartans Pifo', ppg: 21.2, matches: 5, avatar: 'CM', position: 'Base' },
+    { id: 2, name: 'Carlos Mendoza', team: 'Spartans Latacunga', ppg: 21.2, matches: 5, avatar: 'CM', position: 'Base' },
     { id: 3, name: 'M. Gómez', team: 'Avanzaré', ppg: 19.8, matches: 5, avatar: 'MG', position: 'Escolta' }
   ],
   threepointers: [
     { id: 1, name: 'M. Gómez', team: 'Avanzaré', tpg: 4.2, total: 21, avatar: 'MG', position: 'Escolta' },
-    { id: 2, name: 'Roberto Díaz', team: 'Huracanes de Pifo', tpg: 3.6, total: 18, avatar: 'RD', position: 'Base' },
+    { id: 2, name: 'Roberto Díaz', team: 'Huracanes de Latacunga', tpg: 3.6, total: 18, avatar: 'RD', position: 'Base' },
     { id: 3, name: 'Juan Pérez', team: 'Los Halcones', tpg: 3.0, total: 15, avatar: 'JP', position: 'Alero' }
   ],
   rebounders: [
-    { id: 1, name: 'Santiago Castro', team: 'Huracanes de Pifo', rpg: 11.3, total: 56, avatar: 'SC', position: 'Pívot' },
-    { id: 2, name: 'Esteban Ortiz', team: 'Bulls Pifo', rpg: 9.8, total: 49, avatar: 'EO', position: 'Pívot' },
+    { id: 1, name: 'Santiago Castro', team: 'Huracanes de Latacunga', rpg: 11.3, total: 56, avatar: 'SC', position: 'Pívot' },
+    { id: 2, name: 'Esteban Ortiz', team: 'Bulls Latacunga', rpg: 9.8, total: 49, avatar: 'EO', position: 'Pívot' },
     { id: 3, name: 'D. Andrade', team: 'Club 24 de Mayo', rpg: 9.2, total: 46, avatar: 'DA', position: 'Ala-Pívot' }
   ]
 };
@@ -49,17 +49,29 @@ function TeamLogo({ team, className = "w-10 h-10", showText = true }) {
   )
 }
 
-export default function Home({ auth, championship, liveMatches: liveMatchesProp = [], recentMatches: recentMatchesProp = [], teams: teamsProp = [], leaders }) {
+export default function Home({ auth, championship, liveMatches: liveMatchesProp = [], recentMatches: recentMatchesProp = [], teams: teamsProp = [], leaders, generalMedia: generalMediaProp = [] }) {
   // Safeguards for Inertia props
   const liveMatches = Array.isArray(liveMatchesProp) ? liveMatchesProp : []
   const recentMatches = Array.isArray(recentMatchesProp) ? recentMatchesProp : []
   const teams = Array.isArray(teamsProp) ? teamsProp : []
+  const generalMedia = Array.isArray(generalMediaProp) ? generalMediaProp : []
 
   const [activeTab, setActiveTab] = useState('inicio')
   const [statsTab, setStatsTab] = useState('clasificacion')
   const [stopScroll, setStopScroll] = useState(false)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [sheetMatch, setSheetMatch] = useState(null)
+
+  // Lightbox visualizer state
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxImg, setLightboxImg] = useState('')
+  const [lightboxTitle, setLightboxTitle] = useState('')
+
+  const handleOpenLightbox = (imgUrl, titleText = '') => {
+    setLightboxImg(imgUrl)
+    setLightboxTitle(titleText)
+    setLightboxOpen(true)
+  }
 
   const standingsTeams = useMemo(() => {
     return (championship?.teams || []).map(team => ({
@@ -200,7 +212,7 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
       {/* 3D WebGL rotating basketball */}
       <ThreeBasketball />
 
-      {/* Dynamic Electric Lightning WebGL Background */}
+      {/* Dynamic Electric Lightning WebGL Background (Solicitado por el usuario) */}
       <div className="fixed inset-0 w-full h-full z-0 pointer-events-none opacity-30">
         <Lightning
           hue={219}
@@ -221,15 +233,13 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
         {/* 1. Desktop Header Navigation */}
         <header className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-darkbg/85 backdrop-blur-xl border-b border-gray-900/60 px-8 py-4 justify-between items-center transition-all duration-300">
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => scrollToSection('inicio')}>
-            <div className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-tr from-basketball to-amber-500">
-              <Trophy className="w-5 h-5 text-black stroke-[2.5]" />
-            </div>
+            <img src="/logo_game_time.png" alt="GameTime Logo" className="w-10 h-10 object-contain" />
             <div>
               <span className="font-extrabold text-xl tracking-wider text-white">
                 GAME<span className="text-basketball">TIME</span>
               </span>
               <span className="block text-[8px] text-[#FFB74D] font-bold uppercase tracking-widest leading-none">
-                Pifo / Torneo 2026
+                Latacunga / Torneo 2026
               </span>
             </div>
           </div>
@@ -279,15 +289,13 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
         {/* Mobile Header */}
         <header className="md:hidden sticky top-0 z-40 w-full bg-darkbg bg-opacity-80 backdrop-blur-md border-b border-[#121212] px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-tr from-basketball to-amber-500">
-              <Trophy className="w-4.5 h-4.5 text-black stroke-[2.5]" />
-            </div>
+            <img src="/logo_game_time.png" alt="GameTime Logo" className="w-8 h-8 object-contain" />
             <div>
               <span className="font-extrabold text-base tracking-wider text-white">
                 GAME<span className="text-basketball">TIME</span>
               </span>
               <span className="block text-[8px] text-gray-500 font-bold uppercase tracking-widest leading-none">
-                Pifo 2026
+                Latacunga 2026
               </span>
             </div>
           </div>
@@ -346,7 +354,7 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
 
                 <div className="space-y-2">
                   <span className="block text-xs md:text-sm font-extrabold text-[#FFB74D] uppercase tracking-widest">
-                    Torneo de Invierno Pifo
+                    Torneo de Invierno Latacunga
                   </span>
                   <h1 className="text-4xl md:text-7xl font-extrabold text-white tracking-tighter leading-none">
                     PASIÓN, EQUIPO <br />
@@ -355,7 +363,7 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
                 </div>
 
                 <p className="text-xs md:text-sm text-gray-400 max-w-lg leading-relaxed font-medium">
-                  Sigue el Campeonato Pifo 2026 en tiempo real. Marcadores oficiales, actas en vivo de la mesa técnica y estadísticas individuales detalladas. El mejor baloncesto de la parroquia se vive aquí.
+                  Sigue el Campeonato Latacunga 2026 en tiempo real. Marcadores oficiales, actas en vivo de la mesa técnica y estadísticas individuales detalladas. El mejor baloncesto de la provincia se vive aquí.
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
@@ -381,7 +389,7 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
                     { title: 'Competencia', desc: 'Niveles élite y amateur', val: '★ ÉLITE' },
                     { title: 'Equipos', desc: 'Registrados en el sistema', val: `${teams.length} CLUBES` },
                     { title: 'Fechas', desc: 'Calendario Oficial', val: 'JORNADAS 1-12' },
-                    { title: 'Sede', desc: 'Pifo, Pichincha', val: 'COLISEO PIFO' }
+                    { title: 'Sede', desc: 'Latacunga, Cotopaxi', val: 'COLISEO LATACUNGA' }
                   ].map((badge, idx) => (
                     <div key={idx} className="flex flex-col p-3 bg-gray-900/25 border border-gray-900/50 rounded-2xl text-left backdrop-blur-md">
                       <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">{badge.title}</span>
@@ -533,7 +541,7 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
 
                           <div className="mt-2.5 pt-2 border-t border-gray-900/60 flex items-center justify-between text-[9px] text-gray-500 font-bold">
                             <span className="flex items-center">
-                              <MapPin className="w-3 h-3 mr-1" /> {m.court || 'Coliseo Pifo'}
+                              <MapPin className="w-3 h-3 mr-1" /> {m.court || 'Coliseo Latacunga'}
                             </span>
                             <span>Árbitro: {m.referee?.name || 'Mesa Oficial'}</span>
                           </div>
@@ -561,7 +569,7 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
               </h2>
               <div className="w-16 h-1 bg-basketball mx-auto mt-2 rounded-full" />
               <p className="text-xs md:text-sm text-gray-400 mt-2 max-w-xl mx-auto leading-relaxed">
-                Conoce a las escuadras oficiales que compiten en el Torneo de Invierno Pifo 2026.
+                Conoce a las escuadras oficiales que compiten en el Torneo de Invierno Latacunga 2026.
               </p>
             </div>
 
@@ -672,8 +680,56 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
               </div>
 
               <div className="backdrop-blur-md rounded-3xl">
-                <MyTeamTab />
+                <MyTeamTab teams={standingsTeams} />
               </div>
+            </div>
+          </section>
+
+          {/* SECTION: GALERÍA GENERAL DEL TORNEO */}
+          <section
+            id="galeria"
+            className="py-16 px-6 relative w-full"
+          >
+            <div className="max-w-5xl w-full mx-auto space-y-6 z-10">
+              <div className="text-center">
+                <span className="text-[10px] uppercase font-bold text-[#FFB74D] tracking-widest">
+                  Momentos del Campeonato
+                </span>
+                <h2 className="text-2xl md:text-4xl font-extrabold text-white uppercase tracking-tight">
+                  Galería de Fotos Oficial
+                </h2>
+                <div className="w-16 h-1 bg-basketball mx-auto mt-2 rounded-full" />
+                <p className="text-xs text-gray-400 mt-2 max-w-xl mx-auto leading-relaxed">
+                  Revive la emoción del torneo a través de las mejores capturas de la jornada y de las barras organizadoras.
+                </p>
+              </div>
+
+              {generalMedia.length === 0 ? (
+                <div className="text-center py-12 text-xs text-gray-500 font-bold bg-gray-950/20 border border-gray-900/60 backdrop-blur-md rounded-3xl max-w-3xl mx-auto">
+                  Aún no se han subido fotos generales para este campeonato. ¡Vuelve pronto!
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
+                  {generalMedia.map((m) => (
+                    <div
+                      key={m.id}
+                      onClick={() => handleOpenLightbox(m.file_path, m.title)}
+                      className="group relative rounded-2xl overflow-hidden border border-gray-900/60 bg-gray-950/20 hover:border-basketball/40 backdrop-blur-md aspect-square cursor-pointer transition-all"
+                    >
+                      <img
+                        src={m.file_path}
+                        alt={m.title || 'Torneo'}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3.5">
+                        <p className="text-[11px] font-black text-white leading-tight truncate">{m.title || 'Galería General'}</p>
+                        <span className="text-[8px] text-[#FFB74D] font-bold uppercase tracking-wider block mt-0.5">Ver en Grande</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
 
@@ -725,7 +781,7 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
           <div className="space-y-1">
             <span className="block text-[10px] text-orange-500 font-bold uppercase tracking-widest">GameTime PWA v2.0 - 3D Experience</span>
             <span className="block text-[9px] text-gray-600 font-semibold max-w-md mx-auto leading-relaxed">
-              Plataforma oficial desarrollada para la Directiva del Torneo de Invierno Pifo 2026. Todos los derechos reservados.
+              Plataforma oficial desarrollada para la Directiva del Torneo de Invierno Latacunga 2026. Todos los derechos reservados.
             </span>
           </div>
         </footer>
@@ -744,6 +800,33 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
             homeTeamData={sheetMatch.home_team}
             awayTeamData={sheetMatch.away_team}
           />
+        )}
+
+        {/* Lightbox Modal */}
+        {lightboxOpen && (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md cursor-pointer"
+            onClick={() => setLightboxOpen(false)}
+          >
+            <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+              <button 
+                onClick={() => setLightboxOpen(false)}
+                className="absolute -top-10 right-0 text-white hover:text-orange-500 font-extrabold text-xs flex items-center space-x-1"
+              >
+                <span>✕</span> <span>Cerrar</span>
+              </button>
+              <img 
+                src={lightboxImg} 
+                alt="Visualización" 
+                className="max-w-full max-h-[80vh] rounded-2xl object-contain border border-gray-900 shadow-2xl" 
+              />
+              {lightboxTitle && (
+                <p className="text-white text-xs font-black mt-3 bg-gray-950/80 px-4 py-2 rounded-xl border border-gray-900/60 backdrop-blur-sm">
+                  {lightboxTitle}
+                </p>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>

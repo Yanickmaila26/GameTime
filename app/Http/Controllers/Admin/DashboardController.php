@@ -7,7 +7,6 @@ use App\Models\Championship;
 use App\Models\Game;
 use App\Models\Team;
 use App\Models\Player;
-use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
@@ -23,13 +22,15 @@ class DashboardController extends Controller
                 'matches.awayTeam',
             ])->latest()->first();
 
-            return Inertia::render('Admin/DirectivaDashboard', [
+            return response()->json([
+                'role' => 'directiva',
                 'championship' => $championship,
             ]);
         }
 
         // ── Panel Admin ─────────────────────────────────────────────────────────
-        return Inertia::render('Admin/Dashboard', [
+        return response()->json([
+            'role' => 'admin',
             'stats' => [
                 'teams'         => Team::where('active', true)->count(),
                 'players'       => Player::count(),

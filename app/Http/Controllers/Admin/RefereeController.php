@@ -5,13 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Referee;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 
 class RefereeController extends Controller
 {
     public function index()
     {
-        return Inertia::render('Admin/Referees', [
+        return response()->json([
             'referees' => Referee::orderBy('name')->get(),
         ]);
     }
@@ -25,9 +24,12 @@ class RefereeController extends Controller
             'email' => 'nullable|email|max:150',
         ]);
 
-        Referee::create($data);
+        $referee = Referee::create($data);
 
-        return back()->with('success', 'Árbitro creado correctamente.');
+        return response()->json([
+            'message' => 'Árbitro creado correctamente.',
+            'referee' => $referee
+        ]);
     }
 
     public function update(Request $request, Referee $referee)
@@ -42,12 +44,17 @@ class RefereeController extends Controller
 
         $referee->update($data);
 
-        return back()->with('success', 'Árbitro actualizado.');
+        return response()->json([
+            'message' => 'Árbitro actualizado.',
+            'referee' => $referee
+        ]);
     }
 
     public function destroy(Referee $referee)
     {
         $referee->delete();
-        return back()->with('success', 'Árbitro eliminado.');
+        return response()->json([
+            'message' => 'Árbitro eliminado.'
+        ]);
     }
 }

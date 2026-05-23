@@ -24,11 +24,11 @@ export default function StandingsTab({ teams }) {
       </div>
 
       {/* Table Container */}
-      <div className="overflow-hidden rounded-2xl border border-[#161616] bg-[#0c0c0c]">
+      <div className="overflow-hidden rounded-2xl border border-gray-900/60 bg-gray-950/20 backdrop-blur-md">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#0e0e0e] border-b border-[#161616] text-[10px] uppercase font-bold tracking-wider text-gray-500">
+              <tr className="bg-gray-950/40 border-b border-gray-900/60 text-[10px] uppercase font-extrabold tracking-wider text-gray-400">
                 <th className="py-3 px-3 text-center w-10">Pos</th>
                 <th className="py-3 px-3">Equipo</th>
                 <th className="py-3 px-2 text-center w-10">PJ</th>
@@ -38,14 +38,14 @@ export default function StandingsTab({ teams }) {
                 <th className="py-3 px-3 text-center w-12 text-basketball">PTS</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#121212]">
+            <tbody className="divide-y divide-gray-900/40">
               {sortedTeams.map((team, index) => {
                 const isPlayoffZone = index < 4;
                 return (
                   <tr
                     key={team.id}
-                    className={`transition-colors duration-200 hover:bg-[#121212] ${
-                      isPlayoffZone ? 'bg-gradient-to-r from-[rgba(25,118,210,0.02)] to-transparent' : ''
+                    className={`transition-colors duration-200 hover:bg-gray-900/30 ${
+                      isPlayoffZone ? 'bg-gradient-to-r from-[rgba(25,118,210,0.04)] to-transparent' : ''
                     }`}
                   >
                     {/* Position */}
@@ -59,8 +59,8 @@ export default function StandingsTab({ teams }) {
                             : index === 2
                             ? 'bg-amber-700 text-white'
                             : isPlayoffZone
-                            ? 'bg-[#1e1e1e] text-electric font-black'
-                            : 'text-gray-500'
+                            ? 'bg-gray-900/50 text-electric-light font-black'
+                            : 'text-gray-400 font-bold'
                         }`}
                       >
                         {index + 1}
@@ -76,7 +76,7 @@ export default function StandingsTab({ teams }) {
                             {team.name}
                           </span>
                           {isPlayoffZone && (
-                            <span className="text-[8px] text-electric font-extrabold uppercase tracking-widest leading-none mt-0.5">
+                            <span className="text-[8px] text-electric-light font-extrabold uppercase tracking-widest leading-none mt-0.5">
                               Zona de Playoffs
                             </span>
                           )}
@@ -101,7 +101,7 @@ export default function StandingsTab({ teams }) {
 
                     {/* Difference */}
                     <td className={`py-3.5 px-2 text-center text-xs font-mono font-bold ${
-                      team.dif > 0 ? 'text-gray-300' : 'text-gray-500'
+                      team.dif > 0 ? 'text-gray-300' : 'text-gray-400'
                     }`}>
                       {team.dif > 0 ? `+${team.dif}` : team.dif}
                     </td>
@@ -109,8 +109,8 @@ export default function StandingsTab({ teams }) {
                     {/* Points */}
                     <td className="py-3.5 px-3 text-center">
                       <span className="text-xs font-extrabold text-[#f57c00] bg-[#f57c00] bg-opacity-10 px-2 py-0.5 rounded border border-basketball border-opacity-20">
-                        {team.pts}
-                      </span>
+                        {team.pts
+                      }</span>
                     </td>
                   </tr>
                 );

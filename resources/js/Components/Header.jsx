@@ -3,19 +3,16 @@ import { Trophy, Bell, User } from 'lucide-react';
 
 export default function Header({ liveCount }) {
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#050505] bg-opacity-80 backdrop-blur-md border-b border-[#121212] px-4 py-3 flex items-center justify-between">
+    <header className="sticky top-0 z-40 w-full bg-darkbg bg-opacity-80 backdrop-blur-md border-b border-[#121212] px-4 py-3 flex items-center justify-between">
       {/* Brand logo & title */}
       <div className="flex items-center space-x-2">
-        <div className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-tr from-basketball to-amber-400 glow-orange">
-          <Trophy className="w-5 h-5 text-black stroke-[2.5]" />
-          <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-electric rounded-full border-2 border-[#050505]" />
-        </div>
+        <img src="/logo_game_time.png" alt="GameTime Logo" className="w-8 h-8 object-contain" />
         <div>
           <span className="font-extrabold text-lg tracking-wider text-white">
             GAME<span className="text-basketball">TIME</span>
           </span>
           <span className="block text-[9px] text-gray-500 font-bold uppercase tracking-widest leading-none">
-            Pifo 2026
+            Latacunga 2026
           </span>
         </div>
       </div>

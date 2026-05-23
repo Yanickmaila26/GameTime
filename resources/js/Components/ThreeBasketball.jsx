@@ -38,7 +38,7 @@ export default function ThreeBasketball() {
         const fadeEnd = window.innerHeight * 0.65; // completely invisible by 65% height
         let opacity = 1.0;
         if (scrollY > fadeStart) {
-          opacity = Math.max(0, 1 - (scrollY - fadeStart) / (fadeEnd - fadeStart));
+          opacity = Math.max(0.35, 1 - (scrollY - fadeStart) / (fadeEnd - fadeStart));
         }
         containerRef.current.style.opacity = opacity;
       }
@@ -98,8 +98,8 @@ export default function ThreeBasketball() {
       bumpCtx.fillRect(0, 0, bumpCanvas.width, bumpCanvas.height);
 
       // Pebble grain generation (dense grid for realistic leather)
-      const rows = 180;
-      const cols = 360;
+      const rows = 140;
+      const cols = 280;
       const cellWidth = canvas.width / cols;
       const cellHeight = canvas.height / rows;
       
@@ -109,21 +109,23 @@ export default function ThreeBasketball() {
           const y = (r + 0.5 + (Math.random() - 0.5) * 0.4) * cellHeight;
           const radius = Math.min(cellWidth, cellHeight) * 0.42;
           
-          const colorVal = Math.random();
-          let color = '#C84B1E';
-          if (colorVal < 0.28) color = '#A63611'; // darker shadows
-          else if (colorVal > 0.72) color = '#DC5E2C'; // lighter highlights
+          // Pebble base shadow / lighting gradient (makes it look 3D and premium)
+          const pebbleGrad = ctx.createRadialGradient(x - radius * 0.15, y - radius * 0.15, 0, x, y, radius);
+          pebbleGrad.addColorStop(0, '#F45D22'); // Highlights
+          pebbleGrad.addColorStop(0.4, '#C84B1E'); // Burnt orange
+          pebbleGrad.addColorStop(0.9, '#9E320A'); // Base shadow
+          pebbleGrad.addColorStop(1.0, '#751B00'); // Edge crease
           
-          ctx.fillStyle = color;
+          ctx.fillStyle = pebbleGrad;
           ctx.beginPath();
           ctx.arc(x, y, radius, 0, Math.PI * 2);
           ctx.fill();
 
           // Grayscale bump map: dome-like radial gradients
-          const bumpGrad = bumpCtx.createRadialGradient(x, y, 0, x, y, radius);
+          const bumpGrad = bumpCtx.createRadialGradient(x - radius * 0.1, y - radius * 0.1, 0, x, y, radius);
           bumpGrad.addColorStop(0, '#FFFFFF');
-          bumpGrad.addColorStop(0.65, '#B0B0B0');
-          bumpGrad.addColorStop(1, '#333333');
+          bumpGrad.addColorStop(0.65, '#A0A0A0');
+          bumpGrad.addColorStop(1.0, '#1A1A1A');
           
           bumpCtx.fillStyle = bumpGrad;
           bumpCtx.beginPath();
@@ -224,14 +226,14 @@ export default function ThreeBasketball() {
     const material = new THREE.MeshPhysicalMaterial({
       map: textures.colorMap,
       bumpMap: textures.bumpMap,
-      bumpScale: 0.022, // Finer leather grain texture instead of spiky bumps
-      roughness: 0.58,  // Semi-rough leather surface
-      metalness: 0.0,   // Standard non-metal leather
-      clearcoat: 0.12,  // Slight shiny topcoat reflection
-      clearcoatRoughness: 0.35,
-      sheen: 0.7,       // Leather fuzz soft reflections on edges
-      sheenRoughness: 0.5,
-      sheenColor: new THREE.Color('#FF7043'),
+      bumpScale: 0.015, // Finer, more realistic bumps
+      roughness: 0.45,  // Slightly shinier highlights
+      metalness: 0.0,
+      clearcoat: 0.18,  // Premium polished leather finish
+      clearcoatRoughness: 0.28,
+      sheen: 0.8,
+      sheenRoughness: 0.4,
+      sheenColor: new THREE.Color('#FF5722'),
     });
     
     const ball = new THREE.Mesh(geometry, material);
@@ -277,8 +279,8 @@ export default function ThreeBasketball() {
       const delta = (time - lastTime) / 1000 || 0;
       lastTime = time;
 
-      // Auto-spinning
-      const scrollSpeed = scrollProgressRef.current * 8.0 + 0.35;
+      // Auto-spinning (Slower rotation based on user scroll speed request)
+      const scrollSpeed = scrollProgressRef.current * 3.0 + 0.12;
       ball.rotation.y += delta * scrollSpeed;
       ball.rotation.x += delta * 0.15;
       ball.rotation.z += delta * 0.05;

@@ -4,15 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
 
 class AuthController extends Controller
 {
-    public function showLogin()
-    {
-        return Inertia::render('Auth/Login');
-    }
-
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -21,25 +15,49 @@ class AuthController extends Controller
         ]);
 
         if (!Auth::attempt($credentials)) {
-            return back()->withErrors(['email' => 'Credenciales incorrectas.']);
+            return response()->json([
+                'message' => 'Credenciales incorrectas.',
+                'errors' => [
+                    'email' => ['Credenciales incorrectas.']
+                ]
+            ], 422);
         }
 
-        if (!Auth::user()->active) {
+        $user = Auth::user();
+
+        if (!$user->active) {
             Auth::logout();
-            return back()->withErrors(['email' => 'Tu cuenta está desactivada.']);
+            return response()->json([
+                'message' => 'Tu cuenta está desactivada.',
+                'errors' => [
+                    'email' => ['Tu cuenta está desactivada.']
+                ]
+            ], 403);
         }
 
-        $request->session()->regenerate();
+        // Generate Sanctum API Token
+        $token = $user->createToken('auth_token')->plainTextToken;
 
-        return redirect()->intended(route('admin.dashboard'));
+        return response()->json([
+            'token' => $token,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'active' => $user->active,
+            ]
+        ]);
     }
 
     public function logout(Request $request)
     {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        if ($request->user()) {
+            $request->user()->currentAccessToken()->delete();
+        }
 
-        return redirect()->route('login');
+        return response()->json([
+            'message' => 'Sesión cerrada correctamente.'
+        ]);
     }
 }

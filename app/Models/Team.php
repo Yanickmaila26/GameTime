@@ -17,6 +17,11 @@ class Team extends Model
         return $this->hasMany(Player::class);
     }
 
+    public function media()
+    {
+        return $this->hasMany(Multimedia::class);
+    }
+
     public function championships()
     {
         return $this->belongsToMany(Championship::class, 'championship_teams')

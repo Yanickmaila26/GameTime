@@ -29,20 +29,38 @@ function RefereeModal({ referee, onClose }) {
           <button onClick={onClose} className="text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={submit} className="space-y-4">
-          <input value={data.name} onChange={e => setData('name', e.target.value)} placeholder="Nombre completo" required
-            className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500" />
-          <input value={data.certification} onChange={e => setData('certification', e.target.value)} placeholder="Certificación"
-            className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500" />
-          <input value={data.phone} onChange={e => setData('phone', e.target.value)} placeholder="Teléfono"
-            className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500" />
-          <input value={data.email} onChange={e => setData('email', e.target.value)} placeholder="Correo electrónico" type="email"
-            className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500" />
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">🦺 Nombre completo del árbitro</label>
+            <input value={data.name} onChange={e => setData('name', e.target.value)} placeholder="Ej: Juan Pérez López" required
+              className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500" />
+            {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">🏅 Certificación / Licencia <span className="normal-case text-gray-600 font-normal">(ej: FIBA, FBF)</span></label>
+            <input value={data.certification} onChange={e => setData('certification', e.target.value)} placeholder="Ej: FIBA Internacional"
+              className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">📞 Teléfono</label>
+              <input value={data.phone} onChange={e => setData('phone', e.target.value)} placeholder="Ej: 0987654321"
+                className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">✉ Correo electrónico</label>
+              <input value={data.email} onChange={e => setData('email', e.target.value)} placeholder="Ej: arbitro@mail.com" type="email"
+                className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500" />
+            </div>
+          </div>
           {referee && (
-            <select value={data.status} onChange={e => setData('status', e.target.value)}
-              className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500">
-              <option value="activo">Activo</option>
-              <option value="inactivo">Inactivo</option>
-            </select>
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">📋 Estado del árbitro</label>
+              <select value={data.status} onChange={e => setData('status', e.target.value)}
+                className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500">
+                <option value="activo">✅ Activo — disponible para partidos</option>
+                <option value="inactivo">⛔ Inactivo — no disponible</option>
+              </select>
+            </div>
           )}
           <button type="submit" disabled={processing}
             className="w-full py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-black font-bold text-sm rounded-2xl disabled:opacity-50">

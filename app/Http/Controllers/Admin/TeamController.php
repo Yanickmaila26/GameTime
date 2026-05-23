@@ -6,13 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Team;
 use App\Models\Player;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 
 class TeamController extends Controller
 {
     public function index()
     {
-        return Inertia::render('Admin/Teams', [
+        return response()->json([
             'teams' => Team::with('players')->orderBy('name')->get(),
         ]);
     }
@@ -27,9 +26,12 @@ class TeamController extends Controller
             'logo_url' => 'nullable|string',
         ]);
 
-        Team::create($data);
+        $team = Team::create($data);
 
-        return back()->with('success', 'Equipo creado correctamente.');
+        return response()->json([
+            'message' => 'Equipo creado correctamente.',
+            'team' => $team
+        ]);
     }
 
     public function update(Request $request, Team $team)
@@ -45,13 +47,18 @@ class TeamController extends Controller
 
         $team->update($data);
 
-        return back()->with('success', 'Equipo actualizado.');
+        return response()->json([
+            'message' => 'Equipo actualizado.',
+            'team' => $team
+        ]);
     }
 
     public function destroy(Team $team)
     {
         $team->delete();
-        return back()->with('success', 'Equipo eliminado.');
+        return response()->json([
+            'message' => 'Equipo eliminado.'
+        ]);
     }
 
     public function storePlayer(Request $request, Team $team)
@@ -65,12 +72,20 @@ class TeamController extends Controller
         ]);
 
         if ($team->gender !== 'mixto' && $data['gender'] !== $team->gender) {
-            return back()->withErrors(['gender' => "El género del jugador debe coincidir con la categoría del equipo ({$team->gender})."]);
+            return response()->json([
+                'message' => 'Error de validación.',
+                'errors' => [
+                    'gender' => ["El género del jugador debe coincidir con la categoría del equipo ({$team->gender})."]
+                ]
+            ], 422);
         }
 
-        $team->players()->create($data);
+        $player = $team->players()->create($data);
 
-        return back()->with('success', 'Jugador agregado.');
+        return response()->json([
+            'message' => 'Jugador agregado.',
+            'player' => $player
+        ]);
     }
 
     public function updatePlayer(Request $request, Team $team, Player $player)
@@ -84,17 +99,27 @@ class TeamController extends Controller
         ]);
 
         if ($team->gender !== 'mixto' && $data['gender'] !== $team->gender) {
-            return back()->withErrors(['gender' => "El género del jugador debe coincidir con la categoría del equipo ({$team->gender})."]);
+            return response()->json([
+                'message' => 'Error de validación.',
+                'errors' => [
+                    'gender' => ["El género del jugador debe coincidir con la categoría del equipo ({$team->gender})."]
+                ]
+            ], 422);
         }
 
         $player->update($data);
 
-        return back()->with('success', 'Jugador actualizado.');
+        return response()->json([
+            'message' => 'Jugador actualizado.',
+            'player' => $player
+        ]);
     }
 
     public function destroyPlayer(Team $team, Player $player)
     {
         $player->delete();
-        return back()->with('success', 'Jugador eliminado.');
+        return response()->json([
+            'message' => 'Jugador eliminado.'
+        ]);
     }
 }

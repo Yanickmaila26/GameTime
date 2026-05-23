@@ -26,7 +26,7 @@ export default function Login() {
             <Sparkles className="w-3 h-3 mr-1" /> Panel Administrativo
           </span>
           <h2 className="text-2xl font-black text-white tracking-tight">GameTime</h2>
-          <p className="text-xs text-gray-400 mt-1">Torneo de Invierno Pifo 2026</p>
+          <p className="text-xs text-gray-400 mt-1">Torneo de Invierno Latacunga 2026</p>
         </div>
 
         {errors.email && (

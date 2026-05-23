@@ -15,10 +15,10 @@ export default function LeadersTab({ leaders }) {
     <div className="space-y-4">
       {/* Tab intro title */}
       <div className="flex items-center justify-between px-1">
-        <span className="text-[10px] uppercase font-bold text-gray-500 tracking-widest">
+        <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">
           Estadísticas Individuales
         </span>
-        <span className="text-[10px] text-electric flex items-center font-bold">
+        <span className="text-[10px] text-electric-light flex items-center font-bold">
           <Trophy className="w-3.5 h-3.5 mr-1" /> Líderes de la Liga
         </span>
       </div>
@@ -34,10 +34,10 @@ export default function LeadersTab({ leaders }) {
           {leaders.scorers.map((player, idx) => (
             <div
               key={player.id}
-              className={`relative overflow-hidden rounded-2xl border bg-gradient-to-r p-3.5 flex items-center justify-between transition-all duration-300 ${
+              className={`relative overflow-hidden rounded-2xl border p-3.5 flex items-center justify-between transition-all duration-300 ${
                 idx === 0
-                  ? 'border-basketball border-opacity-35 from-[#0e0c0a] to-[#0c0c0c] shadow-[0_0_15px_rgba(245,124,0,0.06)]'
-                  : 'border-[#161616] from-[#0c0c0c] to-[#0c0c0c]'
+                  ? 'border-basketball/35 bg-basketball/5 backdrop-blur-md shadow-[0_0_15px_rgba(245,124,0,0.06)]'
+                  : 'border-gray-900/60 bg-gray-950/20 backdrop-blur-md hover:border-gray-800/60'
               }`}
             >
               {idx === 0 && (
@@ -51,7 +51,7 @@ export default function LeadersTab({ leaders }) {
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm border ${
                   idx === 0
                     ? 'bg-basketball bg-opacity-10 border-basketball text-basketball'
-                    : 'bg-[#161616] border-[#222] text-gray-400'
+                    : 'bg-gray-950/40 border-gray-900/60 text-gray-400'
                 }`}>
                   {player.avatar}
                 </div>
@@ -61,11 +61,11 @@ export default function LeadersTab({ leaders }) {
                     {player.name}
                   </h4>
                   <div className="flex items-center space-x-1.5 mt-0.5">
-                    <span className="text-[10px] text-gray-500 font-bold">
+                    <span className="text-[10px] text-gray-400 font-bold">
                       {player.team}
                     </span>
-                    <span className="text-gray-700 text-[9px] font-bold">•</span>
-                    <span className="text-[9px] bg-[#161616] border border-[#222] px-1.5 py-0.2 rounded text-gray-400 font-bold uppercase tracking-wider">
+                    <span className="text-gray-600 text-[9px] font-bold">•</span>
+                    <span className="text-[9px] bg-gray-950/40 border border-gray-900/60 px-1.5 py-0.5 rounded text-gray-300 font-bold uppercase tracking-wider">
                       {player.position}
                     </span>
                   </div>
@@ -76,7 +76,7 @@ export default function LeadersTab({ leaders }) {
                 <span className="block text-lg font-black text-white tracking-tighter leading-none">
                   {player.ppg}
                 </span>
-                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
                   PPG
                 </span>
               </div>
@@ -96,10 +96,10 @@ export default function LeadersTab({ leaders }) {
           {leaders.threepointers.map((player, idx) => (
             <div
               key={player.id}
-              className={`relative overflow-hidden rounded-2xl border bg-gradient-to-r p-3.5 flex items-center justify-between transition-all duration-300 ${
+              className={`relative overflow-hidden rounded-2xl border p-3.5 flex items-center justify-between transition-all duration-300 ${
                 idx === 0
-                  ? 'border-electric border-opacity-35 from-[#0a0d10] to-[#0c0c0c] shadow-[0_0_15px_rgba(25,118,210,0.06)]'
-                  : 'border-[#161616] from-[#0c0c0c] to-[#0c0c0c]'
+                  ? 'border-electric-light/35 bg-electric/5 backdrop-blur-md shadow-[0_0_15px_rgba(25,118,210,0.06)]'
+                  : 'border-gray-900/60 bg-gray-950/20 backdrop-blur-md hover:border-gray-800/60'
               }`}
             >
               {idx === 0 && (
@@ -111,8 +111,8 @@ export default function LeadersTab({ leaders }) {
               <div className="flex items-center space-x-3.5">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm border ${
                   idx === 0
-                    ? 'bg-electric bg-opacity-10 border-electric text-electric'
-                    : 'bg-[#161616] border-[#222] text-gray-400'
+                    ? 'bg-electric bg-opacity-10 border-electric text-electric-light'
+                    : 'bg-gray-950/40 border-gray-900/60 text-gray-400'
                 }`}>
                   {player.avatar}
                 </div>
@@ -122,11 +122,11 @@ export default function LeadersTab({ leaders }) {
                     {player.name}
                   </h4>
                   <div className="flex items-center space-x-1.5 mt-0.5">
-                    <span className="text-[10px] text-gray-500 font-bold">
+                    <span className="text-[10px] text-gray-400 font-bold">
                       {player.team}
                     </span>
-                    <span className="text-gray-700 text-[9px] font-bold">•</span>
-                    <span className="text-[9px] bg-[#161616] border border-[#222] px-1.5 py-0.2 rounded text-gray-400 font-bold uppercase tracking-wider">
+                    <span className="text-gray-600 text-[9px] font-bold">•</span>
+                    <span className="text-[9px] bg-gray-950/40 border border-gray-900/60 px-1.5 py-0.5 rounded text-gray-300 font-bold uppercase tracking-wider">
                       {player.position}
                     </span>
                   </div>
@@ -137,7 +137,7 @@ export default function LeadersTab({ leaders }) {
                 <span className="block text-lg font-black text-white tracking-tighter leading-none">
                   {player.tpg}
                 </span>
-                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
                   TPG ({player.total} Totales)
                 </span>
               </div>
@@ -157,10 +157,10 @@ export default function LeadersTab({ leaders }) {
           {leaders.rebounders.map((player, idx) => (
             <div
               key={player.id}
-              className={`relative overflow-hidden rounded-2xl border bg-gradient-to-r p-3.5 flex items-center justify-between transition-all duration-300 ${
+              className={`relative overflow-hidden rounded-2xl border p-3.5 flex items-center justify-between transition-all duration-300 ${
                 idx === 0
-                  ? 'border-amber-500 border-opacity-35 from-[#0e0b07] to-[#0c0c0c] shadow-[0_0_15px_rgba(245,158,11,0.06)]'
-                  : 'border-[#161616] from-[#0c0c0c] to-[#0c0c0c]'
+                  ? 'border-amber-500/35 bg-amber-500/5 backdrop-blur-md shadow-[0_0_15px_rgba(245,158,11,0.06)]'
+                  : 'border-gray-900/60 bg-gray-950/20 backdrop-blur-md hover:border-gray-800/60'
               }`}
             >
               {idx === 0 && (
@@ -172,8 +172,8 @@ export default function LeadersTab({ leaders }) {
               <div className="flex items-center space-x-3.5">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm border ${
                   idx === 0
-                    ? 'bg-amber-500 bg-opacity-10 border-amber-500 text-amber-500'
-                    : 'bg-[#161616] border-[#222] text-gray-400'
+                    ? 'bg-amber-500 bg-opacity-10 border-amber-500 text-amber-400'
+                    : 'bg-gray-950/40 border-gray-900/60 text-gray-400'
                 }`}>
                   {player.avatar}
                 </div>
@@ -183,11 +183,11 @@ export default function LeadersTab({ leaders }) {
                     {player.name}
                   </h4>
                   <div className="flex items-center space-x-1.5 mt-0.5">
-                    <span className="text-[10px] text-gray-500 font-bold">
+                    <span className="text-[10px] text-gray-400 font-bold">
                       {player.team}
                     </span>
-                    <span className="text-gray-700 text-[9px] font-bold">•</span>
-                    <span className="text-[9px] bg-[#161616] border border-[#222] px-1.5 py-0.2 rounded text-gray-400 font-bold uppercase tracking-wider">
+                    <span className="text-gray-600 text-[9px] font-bold">•</span>
+                    <span className="text-[9px] bg-gray-950/40 border border-gray-900/60 px-1.5 py-0.5 rounded text-gray-300 font-bold uppercase tracking-wider">
                       {player.position}
                     </span>
                   </div>
@@ -198,7 +198,7 @@ export default function LeadersTab({ leaders }) {
                 <span className="block text-lg font-black text-white tracking-tighter leading-none">
                   {player.rpg}
                 </span>
-                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
                   FPP ({player.total} Totales)
                 </span>
               </div>
