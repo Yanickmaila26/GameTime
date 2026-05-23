@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
-import { teamRoster } from '../data/mockData';
 import { Users, Award, Shield, Calendar, CheckCircle2, TrendingUp } from 'lucide-react';
+
+const teamRoster = [
+  { id: 'p1', name: 'D. Valencia', number: 10, pos: 'Base', ppg: 12.4, status: 'Activo' },
+  { id: 'p2', name: 'M. Gómez', number: 7, pos: 'Escolta', ppg: 19.8, status: 'Activo' },
+  { id: 'p3', name: 'L. Benavides', number: 15, pos: 'Alero', ppg: 8.2, status: 'Activo' },
+  { id: 'p4', name: 'A. Ibarra', number: 22, pos: 'Ala-Pívot', ppg: 6.5, status: 'Activo' },
+  { id: 'p5', name: 'J. Carabalí', number: 33, pos: 'Pívot', ppg: 10.1, status: 'Activo' },
+  { id: 'p6', name: 'E. Cevallos', number: 5, pos: 'Base suplente', ppg: 4.3, status: 'Activo' },
+  { id: 'p7', name: 'F. Caicedo', number: 11, pos: 'Escolta suplente', ppg: 2.1, status: 'Lesionado' }
+];
 
 export default function MyTeamTab() {
   const [hasVoted, setHasVoted] = useState(false);

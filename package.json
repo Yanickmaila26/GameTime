@@ -13,7 +13,8 @@
     "lucide-react": "^0.400.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "sweetalert2": "^11.26.24"
+    "sweetalert2": "^11.26.24",
+    "three": "^0.184.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
