@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PublicController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -9,6 +10,27 @@ use App\Http\Controllers\Admin\RefereeController;
 use App\Http\Controllers\Admin\ChampionshipController;
 use App\Http\Controllers\Admin\MatchController;
 use App\Http\Controllers\Admin\MultimediaController;
+
+// ─── Migraciones y Seeds desde el Navegador ──────────────────────────────────
+Route::get('/run-migrations', function () {
+    try {
+        Artisan::call('migrate', ['--force' => true]);
+        $output = Artisan::output();
+        
+        Artisan::call('db:seed', ['--force' => true]);
+        $output .= "\n" . Artisan::output();
+        
+        return response()->json([
+            'status' => 'success',
+            'output' => $output
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage()
+        ], 500);
+    }
+});
 
 // ─── Público ────────────────────────────────────────────────────────────────
 Route::get('/home', [PublicController::class, 'home']);
