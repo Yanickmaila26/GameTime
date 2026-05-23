@@ -40,8 +40,11 @@ RUN composer install --no-dev --optimize-autoloader
 # Set permissions for Laravel storage and cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
+# Make startup script executable
+RUN chmod +x /var/www/html/start.sh
+
 # Expose port (Render sets this dynamically)
 EXPOSE 80
 
 # Start command
-CMD ["apache2-foreground"]
+CMD ["/var/www/html/start.sh"]
