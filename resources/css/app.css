@@ -16,10 +16,10 @@
   --color-electric-dark: #0D47A1;
   --color-electric-glow: rgba(25, 118, 210, 0.15);
 
-  --color-darkbg: #050505;
-  --color-darkbg-card: #0d0d0d;
-  --color-darkbg-lighter: #161616;
-  --color-darkbg-border: #222222;
+  --color-darkbg: #02040b;
+  --color-darkbg-card: #0c0d16;
+  --color-darkbg-lighter: #121422;
+  --color-darkbg-border: #1a1e35;
 
   --font-sans: 'Outfit', 'Inter', sans-serif;
   
@@ -27,7 +27,7 @@
 }
 
 body {
-  background-color: #050505;
+  background-color: #02040b;
   color: #f3f4f6;
   font-family: var(--font-sans);
 }

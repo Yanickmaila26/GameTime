@@ -23,8 +23,15 @@ function MatchModal({ match, championships, teams, referees, onClose }) {
     scheduled_at: match?.scheduled_at ?? '',
   })
 
+  const [sameTeamError, setSameTeamError] = useState(false)
+
   const submit = (e) => {
     e.preventDefault()
+    if (data.home_team_id && data.away_team_id && String(data.home_team_id) === String(data.away_team_id)) {
+      setSameTeamError(true)
+      return
+    }
+    setSameTeamError(false)
     if (match) {
       put(`/admin/partidos/${match.id}`, { onSuccess: onClose })
     } else {
@@ -32,41 +39,123 @@ function MatchModal({ match, championships, teams, referees, onClose }) {
     }
   }
 
-  const selectClass = "w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500"
-  const inputClass = "w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500"
+  const labelClass = "block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5"
+  const selectClass = "w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500 transition-colors"
+  const inputClass  = "w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500 transition-colors placeholder:text-gray-600"
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
       <div className="bg-[#0d0d0d] border border-[#222] rounded-3xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-sm font-black text-white">{match ? 'Editar Partido' : 'Nuevo Partido'}</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
+          <div>
+            <h3 className="text-sm font-black text-white">{match ? 'Editar Partido' : 'Nuevo Partido'}</h3>
+            <p className="text-[11px] text-gray-500 mt-0.5">Completa todos los campos para registrar el partido</p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
         </div>
-        <form onSubmit={submit} className="space-y-4">
-          <select value={data.championship_id} onChange={e => setData('championship_id', e.target.value)} required className={selectClass}>
-            <option value="">Seleccionar campeonato</option>
-            {championships.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <div className="grid grid-cols-2 gap-3">
-            <select value={data.home_team_id} onChange={e => setData('home_team_id', e.target.value)} required className={selectClass}>
-              <option value="">Equipo Local</option>
-              {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+
+        <form onSubmit={submit} className="space-y-5">
+
+          {/* Campeonato */}
+          <div>
+            <label className={labelClass}>🏆 Campeonato</label>
+            <select value={data.championship_id} onChange={e => setData('championship_id', e.target.value)} required className={selectClass}>
+              <option value="">Seleccionar campeonato al que pertenece el partido</option>
+              {championships.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-            <select value={data.away_team_id} onChange={e => setData('away_team_id', e.target.value)} required className={selectClass}>
-              <option value="">Equipo Visitante</option>
-              {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            {errors.championship_id && <p className="text-red-400 text-xs mt-1">{errors.championship_id}</p>}
+          </div>
+
+          {/* Equipos */}
+          <div>
+            <label className={labelClass}>⚡ Equipos enfrentados</label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-[10px] text-gray-600 mb-1 font-semibold">🏠 Local (de casa)</p>
+                <select
+                  value={data.home_team_id}
+                  onChange={e => { setData('home_team_id', e.target.value); setSameTeamError(false) }}
+                  required
+                  className={selectClass}
+                >
+                  <option value="">Seleccionar equipo</option>
+                  {teams.map(t => (
+                    <option key={t.id} value={t.id} disabled={String(t.id) === String(data.away_team_id)}>
+                      {t.name}{String(t.id) === String(data.away_team_id) ? ' (ya seleccionado)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-600 mb-1 font-semibold">✈ Visitante (foráneo)</p>
+                <select
+                  value={data.away_team_id}
+                  onChange={e => { setData('away_team_id', e.target.value); setSameTeamError(false) }}
+                  required
+                  className={selectClass}
+                >
+                  <option value="">Seleccionar equipo</option>
+                  {teams.map(t => (
+                    <option key={t.id} value={t.id} disabled={String(t.id) === String(data.home_team_id)}>
+                      {t.name}{String(t.id) === String(data.home_team_id) ? ' (ya seleccionado)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {sameTeamError && (
+              <p className="text-red-400 text-xs font-semibold mt-2 px-1">⚠ El equipo local y visitante no pueden ser el mismo.</p>
+            )}
+          </div>
+
+          {/* Árbitro */}
+          <div>
+            <label className={labelClass}>🦺 Árbitro principal</label>
+            <select value={data.referee_id} onChange={e => setData('referee_id', e.target.value)} className={selectClass}>
+              <option value="">Sin árbitro asignado (opcional)</option>
+              {referees.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
-          <select value={data.referee_id} onChange={e => setData('referee_id', e.target.value)} className={selectClass}>
-            <option value="">Sin árbitro principal</option>
-            {referees.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-          </select>
-          <input value={data.court} onChange={e => setData('court', e.target.value)} placeholder="Cancha" className={inputClass} />
-          <input value={data.scheduled_at} onChange={e => setData('scheduled_at', e.target.value)} type="datetime-local" className={inputClass} />
-          <input value={data.round} onChange={e => setData('round', +e.target.value)} type="number" min={1} placeholder="Ronda" className={inputClass} />
+
+          {/* Cancha */}
+          <div>
+            <label className={labelClass}>📍 Cancha / Lugar del partido</label>
+            <input
+              value={data.court}
+              onChange={e => setData('court', e.target.value)}
+              placeholder="Ej: Coliseo Mayor de Latacunga"
+              className={inputClass}
+            />
+          </div>
+
+          {/* Fecha y Ronda en fila */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelClass}>📅 Fecha y hora</label>
+              <input
+                value={data.scheduled_at}
+                onChange={e => setData('scheduled_at', e.target.value)}
+                type="datetime-local"
+                className={inputClass}
+              />
+              <p className="text-[10px] text-gray-600 mt-1">Cuándo se jugará el partido</p>
+            </div>
+            <div>
+              <label className={labelClass}>🔢 Ronda</label>
+              <input
+                value={data.round}
+                onChange={e => setData('round', +e.target.value)}
+                type="number"
+                min={1}
+                placeholder="1"
+                className={inputClass}
+              />
+            </div>
+          </div>
+
           <button type="submit" disabled={processing}
-            className="w-full py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-black font-bold text-sm rounded-2xl disabled:opacity-50">
-            {processing ? 'Guardando...' : match ? 'Actualizar' : 'Crear Partido'}
+            className="w-full py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-black font-bold text-sm rounded-2xl disabled:opacity-50 hover:opacity-90 transition-opacity mt-2">
+            {processing ? 'Guardando...' : match ? 'Actualizar Partido' : 'Crear Partido'}
           </button>
         </form>
       </div>

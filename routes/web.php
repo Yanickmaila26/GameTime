@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\TeamController;
 use App\Http\Controllers\Admin\RefereeController;
 use App\Http\Controllers\Admin\ChampionshipController;
 use App\Http\Controllers\Admin\MatchController;
+use App\Http\Controllers\Admin\MultimediaController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Público ────────────────────────────────────────────────────────────────
@@ -54,6 +55,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,directiv
     Route::post('/partidos/{match}/foul', [MatchController::class, 'foul'])->name('match.foul');
     Route::post('/partidos/{match}/next-quarter', [MatchController::class, 'nextQuarter'])->name('match.next-quarter');
     Route::post('/partidos/{match}/finish', [MatchController::class, 'finish'])->name('match.finish');
+
+    // Multimedia
+    Route::get('/multimedia', [MultimediaController::class, 'index'])->name('multimedia');
+    Route::post('/multimedia', [MultimediaController::class, 'store'])->name('multimedia.store');
+    Route::delete('/multimedia/{media}', [MultimediaController::class, 'destroy'])->name('multimedia.destroy');
 
     // Rutas solo para admin (no directiva)
     Route::middleware('role:admin')->group(function () {

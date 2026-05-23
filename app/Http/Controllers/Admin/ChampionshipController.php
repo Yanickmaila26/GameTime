@@ -7,13 +7,12 @@ use App\Models\Championship;
 use App\Models\Team;
 use App\Models\Game;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 
 class ChampionshipController extends Controller
 {
     public function index()
     {
-        return Inertia::render('Admin/Championships', [
+        return response()->json([
             'championships' => Championship::with(['teams', 'creator', 'matches.homeTeam', 'matches.awayTeam'])->latest()->get(),
             'teams' => Team::where('active', true)->orderBy('name')->get(),
         ]);
@@ -36,9 +35,12 @@ class ChampionshipController extends Controller
 
         // Knockout requires exactly 4, 8, 16 or 32 teams
         if (!$hasGroupStage && !in_array($teamCount, [4, 8, 16, 32])) {
-            return back()->withErrors([
-                'team_ids' => "La eliminación directa requiere exactamente 4, 8, 16 o 32 equipos. Se seleccionaron: {$teamCount}.",
-            ]);
+            return response()->json([
+                'message' => 'Error de validación.',
+                'errors' => [
+                    'team_ids' => ["La eliminación directa requiere exactamente 4, 8, 16 o 32 equipos. Se seleccionaron: {$teamCount}."]
+                ]
+            ], 422);
         }
 
         $championship = Championship::create([
@@ -55,7 +57,10 @@ class ChampionshipController extends Controller
             $championship->teams()->attach($data['team_ids']);
         }
 
-        return back()->with('success', 'Campeonato creado.');
+        return response()->json([
+            'message' => 'Campeonato creado.',
+            'championship' => $championship
+        ]);
     }
 
     public function update(Request $request, Championship $championship)
@@ -79,9 +84,12 @@ class ChampionshipController extends Controller
             $invalidTeams = $teams->filter(fn($t) => $t->players->count() < 2);
             if ($invalidTeams->isNotEmpty()) {
                 $names = $invalidTeams->pluck('name')->join(', ');
-                return back()->withErrors([
-                    'status' => "Los siguientes equipos tienen menos de 2 jugadores: {$names}. Agrega jugadores antes de iniciar."
-                ]);
+                return response()->json([
+                    'message' => 'Error de validación.',
+                    'errors' => [
+                        'status' => ["Los siguientes equipos tienen menos de 2 jugadores: {$names}. Agrega jugadores antes de iniciar."]
+                    ]
+                ], 422);
             }
         }
 
@@ -100,13 +108,18 @@ class ChampionshipController extends Controller
             }
         }
 
-        return back()->with('success', 'Campeonato actualizado.');
+        return response()->json([
+            'message' => 'Campeonato actualizado.',
+            'championship' => $championship
+        ]);
     }
 
     public function destroy(Championship $championship)
     {
         $championship->delete();
-        return back()->with('success', 'Campeonato eliminado.');
+        return response()->json([
+            'message' => 'Campeonato eliminado.'
+        ]);
     }
 
     private function generateInitialMatches(Championship $championship)
@@ -191,11 +204,6 @@ class ChampionshipController extends Controller
         }
     }
 
-    /**
-     * Build an infinite-like list of Carbon dates following the given play_days
-     * schedule, grouped by matches_per_day per date slot.
-     * Returns a flat array where each index maps to one match's date.
-     */
     private function buildScheduleDates($startDate, array $playDays, int $matchesPerDay): array
     {
         if (!$startDate || empty($playDays)) {
@@ -244,7 +252,10 @@ class ChampionshipController extends Controller
             ->max('round');
 
         if (!$maxRound) {
-            return back()->withErrors(['error' => 'No hay partidos de playoff programados.']);
+            return response()->json([
+                'message' => 'Error.',
+                'errors' => ['error' => ['No hay partidos de playoff programados.']]
+            ], 422);
         }
 
         $matches = Game::where('championship_id', $championship->id)
@@ -256,12 +267,17 @@ class ChampionshipController extends Controller
 
         $pending = $matches->where('status', '!=', 'finished')->count();
         if ($pending > 0) {
-            return back()->withErrors(['error' => 'Aún hay partidos sin finalizar en esta ronda.']);
+            return response()->json([
+                'message' => 'Error.',
+                'errors' => ['error' => ['Aún hay partidos sin finalizar en esta ronda.']]
+            ], 422);
         }
 
         if ($hasFinal) {
             $championship->update(['status' => 'finished']);
-            return back()->with('success', 'El campeonato ha finalizado.');
+            return response()->json([
+                'message' => 'El campeonato ha finalizado.'
+            ]);
         }
 
         $isSemifinal = $matches->contains('label', 'Semifinal');
@@ -269,7 +285,10 @@ class ChampionshipController extends Controller
         if ($isSemifinal) {
             $semis = $matches->where('label', 'Semifinal')->values();
             if ($semis->count() < 2) {
-                return back()->withErrors(['error' => 'Datos de semifinal incompletos.']);
+                return response()->json([
+                    'message' => 'Error.',
+                    'errors' => ['error' => ['Datos de semifinal incompletos.']]
+                ], 422);
             }
 
             $m1 = $semis[0];
@@ -305,7 +324,9 @@ class ChampionshipController extends Controller
                 ]);
             }
 
-            return back()->with('success', 'Partidos de Final (y 3er lugar) generados.');
+            return response()->json([
+                'message' => 'Partidos de Final (y 3er lugar) generados.'
+            ]);
         }
 
         // For earlier rounds (e.g. Round of 16, Cuartos)
@@ -316,7 +337,10 @@ class ChampionshipController extends Controller
 
         $winnerCount = count($winners);
         if ($winnerCount % 2 !== 0) {
-            return back()->withErrors(['error' => 'Número de ganadores impar. No se pueden emparejar.']);
+            return response()->json([
+                'message' => 'Error.',
+                'errors' => ['error' => ['Número de ganadores impar. No se pueden emparejar.']]
+            ], 422);
         }
 
         $nextLabel = $this->getKnockoutLabel($winnerCount);
@@ -333,7 +357,9 @@ class ChampionshipController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Siguiente ronda de playoffs generada.');
+        return response()->json([
+            'message' => 'Siguiente ronda de playoffs generada.'
+        ]);
     }
 
     public function generatePlayoffsFromGroup(Request $request, Championship $championship)
@@ -346,12 +372,18 @@ class ChampionshipController extends Controller
         $orderedTeams = $championship->teams()->get(); // Ordered by pts desc in relationship
 
         if ($orderedTeams->count() < $limit) {
-            return back()->withErrors(['error' => "Se necesitan al menos {$limit} equipos para generar esta eliminatoria."]);
+            return response()->json([
+                'message' => 'Error.',
+                'errors' => ['error' => ["Se necesitan al menos {$limit} equipos para generar esta eliminatoria."]]
+            ], 422);
         }
 
         $exists = Game::where('championship_id', $championship->id)->where('stage', 'playoff')->exists();
         if ($exists) {
-            return back()->withErrors(['error' => 'Ya se han generado partidos de playoff para este campeonato.']);
+            return response()->json([
+                'message' => 'Error.',
+                'errors' => ['error' => ['Ya se han generado partidos de playoff para este campeonato.']]
+            ], 422);
         }
 
         $label = $limit === 4 ? 'Semifinal' : 'Cuartos de Final';
@@ -371,7 +403,9 @@ class ChampionshipController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Fase de eliminatorias (playoffs) generada exitosamente.');
+        return response()->json([
+            'message' => 'Fase de eliminatorias (playoffs) generada exitosamente.'
+        ]);
     }
 
     public function addManualMatch(Request $request, Championship $championship)
@@ -387,11 +421,14 @@ class ChampionshipController extends Controller
             'referee_id' => 'nullable|exists:referees,id',
         ]);
 
-        Game::create(array_merge($data, [
+        $game = Game::create(array_merge($data, [
             'championship_id' => $championship->id,
             'status' => 'scheduled',
         ]));
 
-        return back()->with('success', 'Partido personalizado creado.');
+        return response()->json([
+            'message' => 'Partido personalizado creado.',
+            'match' => $game
+        ]);
     }
 }

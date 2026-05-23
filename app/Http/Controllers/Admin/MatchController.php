@@ -11,13 +11,12 @@ use App\Models\Player;
 use App\Models\Referee;
 use App\Models\Team;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 
 class MatchController extends Controller
 {
     public function index()
     {
-        return Inertia::render('Admin/Matches', [
+        return response()->json([
             'matches' => Game::with(['homeTeam', 'awayTeam', 'championship', 'referee'])
                 ->orderBy('scheduled_at')
                 ->get(),
@@ -41,9 +40,12 @@ class MatchController extends Controller
             'scheduled_at' => 'nullable|date',
         ]);
 
-        Game::create($data);
+        $match = Game::create($data);
 
-        return back()->with('success', 'Partido creado.');
+        return response()->json([
+            'message' => 'Partido creado.',
+            'match' => $match
+        ]);
     }
 
     public function update(Request $request, Game $match)
@@ -58,13 +60,18 @@ class MatchController extends Controller
 
         $match->update($data);
 
-        return back()->with('success', 'Partido actualizado.');
+        return response()->json([
+            'message' => 'Partido actualizado.',
+            'match' => $match
+        ]);
     }
 
     public function destroy(Game $match)
     {
         $match->delete();
-        return back()->with('success', 'Partido eliminado.');
+        return response()->json([
+            'message' => 'Partido eliminado.'
+        ]);
     }
 
     public function live(Game $match)
@@ -77,7 +84,7 @@ class MatchController extends Controller
             'championship',
         ]);
 
-        return Inertia::render('Admin/MatchLive', [
+        return response()->json([
             'match' => $match,
         ]);
     }
@@ -233,11 +240,10 @@ class MatchController extends Controller
             }
         });
 
-        if (!empty($data['finish'])) {
-            return redirect()->route('admin.matches')->with('success', 'Partido finalizado.');
-        }
-
-        return back()->with('success', 'Cuarto guardado.');
+        return response()->json([
+            'message' => !empty($data['finish']) ? 'Partido finalizado.' : 'Cuarto guardado.',
+            'match' => $match->fresh(['homeTeam.players', 'awayTeam.players', 'players.player', 'events'])
+        ]);
     }
 
     public function start(Game $match)
@@ -252,10 +258,13 @@ class MatchController extends Controller
             'match_id' => $match->id,
             'quarter' => 1,
             'type' => 'quarter_end',
-            'description' => 'Partido iniciado - Cuarto 1',
+            'description' => 'Partido iniciado. Cuarto 1 en curso.',
         ]);
 
-        return back();
+        return response()->json([
+            'message' => 'Partido iniciado.',
+            'match' => $match->fresh(['homeTeam.players', 'awayTeam.players', 'players.player', 'events'])
+        ]);
     }
 
     public function score(Request $request, Game $match)
@@ -290,7 +299,10 @@ class MatchController extends Controller
             'away_score_snapshot' => $match->away_score,
         ]);
 
-        return back();
+        return response()->json([
+            'message' => 'Puntos registrados.',
+            'match' => $match->fresh(['homeTeam.players', 'awayTeam.players', 'players.player', 'events'])
+        ]);
     }
 
     public function foul(Request $request, Game $match)
@@ -321,13 +333,21 @@ class MatchController extends Controller
             'player_id' => $data['player_id'],
         ]);
 
-        return back();
+        return response()->json([
+            'message' => 'Falta registrada.',
+            'match' => $match->fresh(['homeTeam.players', 'awayTeam.players', 'players.player', 'events'])
+        ]);
     }
 
     public function nextQuarter(Game $match)
     {
         if ($match->current_quarter >= 4) {
-            return back()->withErrors(['quarter' => 'Ya se jugaron todos los cuartos.']);
+            return response()->json([
+                'message' => 'Error.',
+                'errors' => [
+                    'quarter' => ['Ya se jugaron todos los cuartos.']
+                ]
+            ], 422);
         }
 
         $nextQ = $match->current_quarter + 1;
@@ -341,10 +361,13 @@ class MatchController extends Controller
             'match_id' => $match->id,
             'quarter' => $match->current_quarter,
             'type' => 'quarter_end',
-            'description' => "Cuarto {$nextQ} iniciado",
+            'description' => "Cuarto {$nextQ} comenzando",
         ]);
 
-        return back();
+        return response()->json([
+            'message' => "Cuarto {$nextQ} comenzando",
+            'match' => $match->fresh(['homeTeam.players', 'awayTeam.players', 'players.player', 'events'])
+        ]);
     }
 
     public function finish(Game $match)
@@ -365,7 +388,10 @@ class MatchController extends Controller
 
         $this->updateStandings($match);
 
-        return redirect()->route('admin.matches');
+        return response()->json([
+            'message' => 'Partido finalizado.',
+            'match' => $match->fresh(['homeTeam.players', 'awayTeam.players', 'players.player', 'events'])
+        ]);
     }
 
     private function updateStandings(Game $match): void

@@ -57,3 +57,14 @@ lerna-debug.log*
 .DS_Store
 Thumbs.db
 *.cache
+
+# ─── Legacy SPA (archivado) ────────────────────────────────────────────────────
+# El directorio src/ era un SPA React standalone con JWT + localhost:3001 (roto).
+# La arquitectura correcta usa Inertia.js en resources/js/.
+# Se excluye del repositorio gametime (backend puro).
+# Si se necesita el frontend standalone, usar c:\laragon\www\front-gametime
+/src/
+/index.html
+/tailwind.config.js
+/postcss.config.js
+/eslint.config.js

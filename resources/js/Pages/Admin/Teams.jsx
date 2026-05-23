@@ -44,21 +44,26 @@ function TeamModal({ team, onClose }) {
           <button onClick={onClose} className="text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={submit} className="space-y-4">
-          <div>
-            <input value={data.name} onChange={e => setData('name', e.target.value)} placeholder="Nombre del equipo" required
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">🏀 Nombre del Equipo</label>
+            <input value={data.name} onChange={e => setData('name', e.target.value)} placeholder="Ej: Los Cóndores BC" required
               className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500" />
             {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name}</p>}
           </div>
 
-          <select value={data.gender} onChange={e => setData('gender', e.target.value)}
-            className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500">
-            <option value="masculino">Masculino</option>
-            <option value="femenino">Femenino</option>
-            <option value="mixto">Mixto</option>
-          </select>
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">⚥ Categoría del Equipo</label>
+            <select value={data.gender} onChange={e => setData('gender', e.target.value)}
+              className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500">
+              <option value="masculino">Masculino</option>
+              <option value="femenino">Femenino</option>
+              <option value="mixto">Mixto</option>
+            </select>
+          </div>
 
-          <div>
-            <input value={data.short_name} onChange={e => setData('short_name', e.target.value)} placeholder="Abrev. (máx 5)" maxLength={5} required
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">🔤 Abreviatura <span className="normal-case text-gray-600 font-normal">(máx. 5 caracteres, aparece en marcadores)</span></label>
+            <input value={data.short_name} onChange={e => setData('short_name', e.target.value)} placeholder="Ej: CBI, TNT, OM" maxLength={5} required
               className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500" />
             {errors.short_name && <p className="text-xs text-red-400 mt-1">{errors.short_name}</p>}
           </div>
@@ -144,26 +149,32 @@ function PlayerModal({ team, player, onClose }) {
           <button onClick={onClose} className="text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={submit} className="space-y-4">
-          <div>
-            <input value={data.name} onChange={e => setData('name', e.target.value)} placeholder="Nombre completo" required
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">👤 Nombre completo del jugador</label>
+            <input value={data.name} onChange={e => setData('name', e.target.value)} placeholder="Ej: Carlos Andrés Pérez" required
               className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500" />
             {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <input value={data.number} onChange={e => setData('number', e.target.value)} placeholder="Número" type="number" min={0} max={99} required
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider"># Dorsal <span className="normal-case text-gray-600 font-normal">(0–99)</span></label>
+              <input value={data.number} onChange={e => setData('number', e.target.value)} placeholder="Ej: 23" type="number" min={0} max={99} required
                 className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500" />
               {errors.number && <p className="text-xs text-red-400 mt-1">{errors.number}</p>}
             </div>
-            <select value={data.position} onChange={e => setData('position', e.target.value)}
-              className="bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500">
-              {['Base', 'Escolta', 'Alero', 'Ala-Pivot', 'Pivot'].map(p => <option key={p}>{p}</option>)}
-            </select>
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">🏟 Posición</label>
+              <select value={data.position} onChange={e => setData('position', e.target.value)}
+                className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500">
+                {['Base', 'Escolta', 'Alero', 'Ala-Pivot', 'Pivot'].map(p => <option key={p}>{p}</option>)}
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">⚥ Género</label>
               <select value={data.gender} onChange={e => setData('gender', e.target.value)}
                 className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500">
                 <option value="masculino">Masculino</option>
@@ -171,12 +182,15 @@ function PlayerModal({ team, player, onClose }) {
               </select>
               {errors.gender && <p className="text-xs text-red-400 mt-1">{errors.gender}</p>}
             </div>
-            <select value={data.status} onChange={e => setData('status', e.target.value)}
-              className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500">
-              <option value="activo">Activo</option>
-              <option value="lesionado">Lesionado</option>
-              <option value="suspendido">Suspendido</option>
-            </select>
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">📋 Estado del jugador</label>
+              <select value={data.status} onChange={e => setData('status', e.target.value)}
+                className="w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500">
+                <option value="activo">✅ Activo</option>
+                <option value="lesionado">🤕 Lesionado</option>
+                <option value="suspendido">⛔ Suspendido</option>
+              </select>
+            </div>
           </div>
 
           <button type="submit" disabled={processing}

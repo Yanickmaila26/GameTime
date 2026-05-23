@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, router, usePage } from '@inertiajs/react'
-import { LayoutDashboard, Users, UserCheck, Trophy, Swords, LogOut, Menu, X, ArrowLeft, User } from 'lucide-react'
+import { LayoutDashboard, Users, UserCheck, Trophy, Swords, LogOut, Menu, X, ArrowLeft, User, Image } from 'lucide-react'
 import { toastSuccess, toastError } from '../lib/swal'
 
 const allMenuItems = [
@@ -9,6 +9,7 @@ const allMenuItems = [
   { name: 'Árbitros', href: '/admin/arbitros', icon: UserCheck, roles: ['admin'] },
   { name: 'Campeonatos', href: '/admin/campeonatos', icon: Trophy, roles: ['admin'] },
   { name: 'Partidos', href: '/admin/partidos', icon: Swords, roles: ['admin', 'directiva'] },
+  { name: 'Multimedia', href: '/admin/multimedia', icon: Image, roles: ['admin', 'directiva'] },
 ]
 
 function NavLink({ item, onClick }) {
@@ -70,8 +71,8 @@ export default function AdminLayout({ title, children }) {
       <aside className="hidden md:flex flex-col w-64 bg-[#0d0d0d] border-r border-[#1a1a1a]">
         <div className="p-6 border-b border-[#1a1a1a]">
           <Link href="/" className="flex items-center space-x-2">
-            <span className="w-8 h-8 bg-gradient-to-tr from-orange-500 to-amber-600 rounded-lg flex items-center justify-center font-black text-black text-sm">GT</span>
-            <span className="font-black text-lg tracking-tight text-white">GameTime</span>
+            <img src="/logo_game_time.png" alt="GameTime" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(245,124,0,0.4)]" />
+            <span className="font-black text-lg tracking-tight text-white">Game<span className="text-[#F57C00]">Time</span></span>
           </Link>
         </div>
         <UserCard user={user} />
@@ -92,8 +93,8 @@ export default function AdminLayout({ title, children }) {
       {/* Header – Mobile */}
       <header className="md:hidden bg-[#0d0d0d] border-b border-[#1a1a1a] p-4 flex items-center justify-between sticky top-0 z-40">
         <Link href="/" className="flex items-center space-x-2">
-          <span className="w-8 h-8 bg-gradient-to-tr from-orange-500 to-amber-600 rounded-lg flex items-center justify-center font-black text-black text-sm">GT</span>
-          <span className="font-black text-base tracking-tight text-white">GameTime</span>
+          <img src="/logo_game_time.png" alt="GameTime" className="w-8 h-8 object-contain drop-shadow-[0_0_6px_rgba(245,124,0,0.4)]" />
+          <span className="font-black text-base tracking-tight text-white">Game<span className="text-[#F57C00]">Time</span></span>
         </Link>
         <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-gray-400 hover:text-white">
           {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
