@@ -48,7 +48,7 @@ function TeamLogo({ team, className = "w-10 h-10", showText = true }) {
   )
 }
 
-export default function Home({ auth, championship, liveMatches: liveMatchesProp = [], recentMatches: recentMatchesProp = [], teams: teamsProp = [] }) {
+export default function Home({ auth, championship, liveMatches: liveMatchesProp = [], recentMatches: recentMatchesProp = [], teams: teamsProp = [], leaders }) {
   // Safeguards for Inertia props
   const liveMatches = Array.isArray(liveMatchesProp) ? liveMatchesProp : []
   const recentMatches = Array.isArray(recentMatchesProp) ? recentMatchesProp : []
@@ -183,7 +183,8 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
         description: e.description,
         score: e.home_score_snapshot !== null ? `${e.home_score_snapshot} - ${e.away_score_snapshot}` : null,
         team: e.team_id === m.home_team_id ? 'home' : 'away',
-      }))
+      })),
+      players: m.players || []
     };
   }
 
@@ -632,7 +633,7 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
                 {statsTab === 'clasificacion' ? (
                   <StandingsTab teams={standingsTeams} />
                 ) : (
-                  <LeadersTab leaders={mockLeaders} />
+                  <LeadersTab leaders={leaders || mockLeaders} />
                 )}
               </div>
             </div>

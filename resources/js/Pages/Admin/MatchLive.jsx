@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { router } from '@inertiajs/react'
 import AdminLayout from '../../Components/AdminLayout'
 import { TeamLogo } from './Teams'
-import { confirmAction } from '../../lib/swal'
+import Swal, { confirmAction } from '../../lib/swal'
 import { Flag, ChevronRight, Clock, Minus } from 'lucide-react'
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
@@ -88,7 +88,7 @@ function TeamPanel({ team, side, localScore, localFouls, localPlayerStats, serve
             const server = serverPlayerStats.find(p => p.player_id === player.id)
             const totalPts   = (server?.points ?? 0) + local.pts
             const totalFouls = (server?.fouls  ?? 0) + local.fouls
-            const ejected    = server?.is_ejected
+            const ejected    = server?.is_ejected || totalFouls >= 5
 
             return (
               <div
@@ -161,6 +161,39 @@ export default function MatchLive({ match }) {
   }, [])
 
   const addFoul = useCallback((team, playerId) => {
+    // 1. Team fouls notification (quarter-based)
+    const serverTeamFouls = team === 'home' ? (match.home_fouls_q ?? 0) : (match.away_fouls_q ?? 0)
+    const localTeamFouls = events.filter(e => e.type === 'foul' && e.team === team).length
+    const totalTeamFouls = serverTeamFouls + localTeamFouls + 1
+
+    if (totalTeamFouls === 4) {
+      const teamName = team === 'home' ? match.home_team.name : match.away_team.name
+      Swal.fire({
+        title: 'Límite de Faltas Colectivas',
+        text: `El equipo "${teamName}" ha cometido 4 faltas en este cuarto. ¡A una falta del BONUS de tiros libres!`,
+        icon: 'warning',
+      })
+    }
+
+    // 2. Player fouls notification (match-based)
+    if (playerId) {
+      const serverPlayer = (match.players ?? []).find(p => p.player_id === playerId)
+      const serverPlayerFouls = serverPlayer?.fouls ?? 0
+      const localPlayerFouls = localPlayerStats[playerId]?.fouls ?? 0
+      const totalPlayerFouls = serverPlayerFouls + localPlayerFouls + 1
+
+      if (totalPlayerFouls === 5) {
+        const playerObj = (team === 'home' ? match.home_team.players : match.away_team.players)?.find(p => p.id === playerId)
+        const playerName = playerObj ? playerObj.name : 'Jugador'
+        const playerNumber = playerObj ? `#${playerObj.number}` : ''
+        Swal.fire({
+          title: 'Jugador Expulsado',
+          text: `El jugador ${playerNumber} ${playerName} ha cometido su 5ta falta personal y debe ser expulsado.`,
+          icon: 'error',
+        })
+      }
+    }
+
     setEvents(prev => [...prev, { type: 'foul', team, player_id: playerId, value: 1, id: Date.now() }])
     if (playerId) {
       setLPS(prev => ({
@@ -168,7 +201,7 @@ export default function MatchLive({ match }) {
         [playerId]: { pts: prev[playerId]?.pts ?? 0, fouls: (prev[playerId]?.fouls ?? 0) + 1 }
       }))
     }
-  }, [])
+  }, [events, localPlayerStats, match])
 
   // Deshacer último evento de un equipo
   const undoLast = useCallback((team) => {
@@ -229,6 +262,61 @@ export default function MatchLive({ match }) {
     if (result.isConfirmed) flush({ finish: true })
   }
 
+  const handleForfeit = async () => {
+    const homeName = match.home_team?.name || 'Equipo Local'
+    const awayName = match.away_team?.name || 'Equipo Visitante'
+    const homeId = match.home_team_id
+    const awayId = match.away_team_id
+
+    const { value: noShowTeamId } = await Swal.fire({
+      title: 'Finalizar por W.O. (No Presentado)',
+      text: 'Seleccione el equipo que NO se presentó al partido:',
+      input: 'radio',
+      inputOptions: {
+        [homeId]: homeName,
+        [awayId]: awayName
+      },
+      inputValidator: (value) => {
+        if (!value) {
+          return '¡Debe seleccionar un equipo!'
+        }
+      },
+      showCancelButton: true,
+      cancelButtonText: 'Cancelar',
+      confirmButtonText: 'Confirmar',
+      confirmButtonColor: '#ef4444',
+      background: '#0d0d0d',
+      color: '#fff',
+    })
+
+    if (noShowTeamId) {
+      const noShowName = noShowTeamId == homeId ? homeName : awayName
+      const winnerName = noShowTeamId == homeId ? awayName : homeName
+      const result = await confirmAction(
+        '¿Confirmar W.O.?',
+        `El equipo "${noShowName}" perderá por no presentarse (0 pts). El equipo "${winnerName}" ganará el partido 20-0 y recibirá 2 pts en la tabla.`,
+        'Confirmar W.O.'
+      )
+      if (result.isConfirmed) {
+        setIsSaving(true)
+        router.post(`/admin/partidos/${match.id}/guardar-cuarto`, {
+          quarter: match.current_quarter || 1,
+          events: [],
+          finish: true,
+          forfeit: true,
+          no_show_team_id: noShowTeamId
+        }, {
+          onSuccess: () => {
+            setEvents([])
+            setLPS({})
+            setIsSaving(false)
+          },
+          onError: () => setIsSaving(false),
+        })
+      }
+    }
+  }
+
   const handleStart = () => router.post(`/admin/partidos/${match.id}/start`)
 
   // Registro de eventos del cuarto actual (local, sin recarga)
@@ -286,10 +374,10 @@ export default function MatchLive({ match }) {
                   Finalizar
                 </button>
               )}
-              {match.status === 'live' && events.length > 0 && (
-                <button onClick={() => flush()} disabled={isSaving}
+              {(match.status === 'scheduled' || match.status === 'live') && (
+                <button onClick={handleForfeit} disabled={isSaving}
                   className="px-4 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold rounded-xl hover:bg-amber-500/20 transition-all disabled:opacity-50">
-                  Guardar Eventos
+                  W.O. / No Presentado
                 </button>
               )}
             </div>

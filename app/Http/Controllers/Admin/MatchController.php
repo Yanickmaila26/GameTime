@@ -97,9 +97,38 @@ class MatchController extends Controller
             'events.*.value'   => 'required|integer|min:1|max:3',
             'advance_quarter'  => 'boolean',
             'finish'           => 'boolean',
+            'forfeit'          => 'boolean',
+            'no_show_team_id'  => 'nullable|exists:teams,id',
         ]);
 
         \DB::transaction(function () use ($data, $match) {
+            if (!empty($data['forfeit']) && !empty($data['no_show_team_id'])) {
+                $noShowTeamId = $data['no_show_team_id'];
+                $isHomeNoShow = ($noShowTeamId == $match->home_team_id);
+                
+                $match->update([
+                    'home_score'      => $isHomeNoShow ? 0 : 20,
+                    'away_score'      => $isHomeNoShow ? 20 : 0,
+                    'status'          => 'finished',
+                    'finished_at'     => now(),
+                    'forfeit_team_id' => $noShowTeamId,
+                ]);
+
+                $noShowTeamName = Team::find($noShowTeamId)?->name ?? 'Equipo';
+
+                MatchEvent::create([
+                    'match_id'             => $match->id,
+                    'quarter'              => $match->current_quarter ?: 1,
+                    'type'                 => 'match_end',
+                    'home_score_snapshot'  => $match->home_score,
+                    'away_score_snapshot'  => $match->away_score,
+                    'description'          => "Partido finalizado por W.O. No se presentó: {$noShowTeamName}",
+                ]);
+
+                $this->updateStandings($match);
+                return;
+            }
+
             $homeScore   = 0;
             $awayScore   = 0;
             $homeFouls   = 0;
@@ -139,9 +168,14 @@ class MatchController extends Controller
                             ['match_id' => $match->id, 'player_id' => $event['player_id']],
                             ['team_id'  => $teamId]
                         );
-                        MatchPlayer::where('match_id', $match->id)
-                            ->where('player_id', $event['player_id'])
-                            ->increment('fouls');
+                        $mp = MatchPlayer::where('match_id', $match->id)
+                            ->where('player_id', $event['player_id']);
+                        $mp->increment('fouls');
+                        
+                        // Eject player from match if total fouls reach 5 or more
+                        if ($mp->first()->fouls >= 5) {
+                            $mp->update(['is_ejected' => true]);
+                        }
                     }
 
                     $newHomeFouls = ($match->home_fouls_q + $homeFouls);
@@ -339,6 +373,8 @@ class MatchController extends Controller
         if ($match->stage !== 'group') {
             return;
         }
+
+        $isForfeit = !is_null($match->forfeit_team_id);
         $homeWon = $match->home_score > $match->away_score;
         $diff = $match->home_score - $match->away_score;
 
@@ -349,24 +385,48 @@ class MatchController extends Controller
             ->where('team_id', $match->away_team_id)
             ->increment('pj');
 
-        if ($homeWon) {
-            $match->championship->standings()->where('team_id', $match->home_team_id)
-                ->increment('pg');
-            $match->championship->standings()->where('team_id', $match->home_team_id)
-                ->increment('pts', 2);
-            $match->championship->standings()->where('team_id', $match->away_team_id)
-                ->increment('pp');
-            $match->championship->standings()->where('team_id', $match->away_team_id)
-                ->increment('pts', 1);
+        if ($isForfeit) {
+            if ($match->forfeit_team_id == $match->home_team_id) {
+                // Home forfeited. Away wins with 2 pts, Home loses with 0 pts.
+                $match->championship->standings()->where('team_id', $match->away_team_id)
+                    ->increment('pg');
+                $match->championship->standings()->where('team_id', $match->away_team_id)
+                    ->increment('pts', 2);
+                $match->championship->standings()->where('team_id', $match->home_team_id)
+                    ->increment('pp');
+                $match->championship->standings()->where('team_id', $match->home_team_id)
+                    ->increment('pts', 0);
+            } else {
+                // Away forfeited. Home wins with 2 pts, Away loses with 0 pts.
+                $match->championship->standings()->where('team_id', $match->home_team_id)
+                    ->increment('pg');
+                $match->championship->standings()->where('team_id', $match->home_team_id)
+                    ->increment('pts', 2);
+                $match->championship->standings()->where('team_id', $match->away_team_id)
+                    ->increment('pp');
+                $match->championship->standings()->where('team_id', $match->away_team_id)
+                    ->increment('pts', 0);
+            }
         } else {
-            $match->championship->standings()->where('team_id', $match->away_team_id)
-                ->increment('pg');
-            $match->championship->standings()->where('team_id', $match->away_team_id)
-                ->increment('pts', 2);
-            $match->championship->standings()->where('team_id', $match->home_team_id)
-                ->increment('pp');
-            $match->championship->standings()->where('team_id', $match->home_team_id)
-                ->increment('pts', 1);
+            if ($homeWon) {
+                $match->championship->standings()->where('team_id', $match->home_team_id)
+                    ->increment('pg');
+                $match->championship->standings()->where('team_id', $match->home_team_id)
+                    ->increment('pts', 2);
+                $match->championship->standings()->where('team_id', $match->away_team_id)
+                    ->increment('pp');
+                $match->championship->standings()->where('team_id', $match->away_team_id)
+                    ->increment('pts', 1);
+            } else {
+                $match->championship->standings()->where('team_id', $match->away_team_id)
+                    ->increment('pg');
+                $match->championship->standings()->where('team_id', $match->away_team_id)
+                    ->increment('pts', 2);
+                $match->championship->standings()->where('team_id', $match->home_team_id)
+                    ->increment('pp');
+                $match->championship->standings()->where('team_id', $match->home_team_id)
+                    ->increment('pts', 1);
+            }
         }
 
         $match->championship->standings()->where('team_id', $match->home_team_id)

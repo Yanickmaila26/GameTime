@@ -9,7 +9,7 @@ class Game extends Model
     protected $table = 'matches';
 
     protected $fillable = [
-        'championship_id', 'round', 'home_team_id', 'away_team_id',
+        'championship_id', 'round', 'home_team_id', 'away_team_id', 'forfeit_team_id',
         'referee_id', 'ref1_id', 'ref2_id', 'court', 'scheduled_at',
         'status', 'home_score', 'away_score', 'current_quarter',
         'home_fouls_q', 'away_fouls_q', 'started_at', 'finished_at',
@@ -35,6 +35,11 @@ class Game extends Model
     public function awayTeam()
     {
         return $this->belongsTo(Team::class, 'away_team_id');
+    }
+
+    public function forfeitTeam()
+    {
+        return $this->belongsTo(Team::class, 'forfeit_team_id');
     }
 
     public function referee()
