@@ -3,12 +3,12 @@ import { Link, router, usePage } from '@inertiajs/react'
 import { LayoutDashboard, Users, UserCheck, Trophy, Swords, LogOut, Menu, X, ArrowLeft, User } from 'lucide-react'
 import { toastSuccess, toastError } from '../lib/swal'
 
-const menuItems = [
-  { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-  { name: 'Equipos', href: '/admin/equipos', icon: Users },
-  { name: 'Árbitros', href: '/admin/arbitros', icon: UserCheck },
-  { name: 'Campeonatos', href: '/admin/campeonatos', icon: Trophy },
-  { name: 'Partidos', href: '/admin/partidos', icon: Swords },
+const allMenuItems = [
+  { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, roles: ['admin', 'directiva'] },
+  { name: 'Equipos', href: '/admin/equipos', icon: Users, roles: ['admin', 'directiva'] },
+  { name: 'Árbitros', href: '/admin/arbitros', icon: UserCheck, roles: ['admin'] },
+  { name: 'Campeonatos', href: '/admin/campeonatos', icon: Trophy, roles: ['admin'] },
+  { name: 'Partidos', href: '/admin/partidos', icon: Swords, roles: ['admin', 'directiva'] },
 ]
 
 function NavLink({ item, onClick }) {
@@ -53,6 +53,8 @@ export default function AdminLayout({ title, children }) {
   const { auth, flash } = usePage().props
   const user = auth.user
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const menuItems = allMenuItems.filter(item => item.roles.includes(user?.role))
 
   // Show server flash messages as Swal toasts
   useEffect(() => {

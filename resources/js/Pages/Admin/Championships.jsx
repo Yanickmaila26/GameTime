@@ -24,17 +24,18 @@ function ActivateModal({ champ, onClose, onConfirm }) {
   const [startDate, setStartDate]         = useState('')
   const [playDays, setPlayDays]           = useState([1, 3, 5]) // Lun, Mié, Vie
   const [matchesPerDay, setMatchesPerDay] = useState(2)
+  const [generateMatches, setGenerateMatches] = useState(true)
 
   const toggleDay = (v) =>
     setPlayDays(prev => prev.includes(v) ? prev.filter(d => d !== v) : [...prev, v].sort())
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (playDays.length === 0) {
+    if (generateMatches && playDays.length === 0) {
       toastWarn('Selecciona al menos un día de juego.')
       return
     }
-    onConfirm({ startDate, playDays, matchesPerDay })
+    onConfirm({ startDate, playDays, matchesPerDay, generateMatches })
   }
 
   return (
@@ -121,6 +122,22 @@ function ActivateModal({ champ, onClose, onConfirm }) {
             </p>
           </div>
 
+          {/* Generación automática de partidos */}
+          <div className="pt-2">
+            <label className="flex items-center space-x-2 text-xs text-white cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={generateMatches}
+                onChange={e => setGenerateMatches(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 accent-orange-500 text-orange-600 focus:ring-orange-500"
+              />
+              <span className="font-bold text-gray-300">Generar partidos automáticamente</span>
+            </label>
+            <p className="text-[10px] text-gray-500 mt-1 pl-6">
+              Si se desactiva, el campeonato se iniciará en blanco sin fixture inicial.
+            </p>
+          </div>
+
           <div className="pt-2 flex space-x-3">
             <button type="button" onClick={onClose}
               className="flex-1 py-3 bg-[#1a1a1a] border border-[#222] text-gray-400 text-sm font-bold rounded-2xl hover:text-white transition-all">
@@ -129,7 +146,7 @@ function ActivateModal({ champ, onClose, onConfirm }) {
             <button type="submit"
               className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-black font-bold text-sm rounded-2xl hover:from-emerald-600 hover:to-green-700 transition-all">
               <Play className="w-4 h-4 inline mr-1" />
-              Generar Fixture
+              {generateMatches ? 'Generar Fixture' : 'Activar campeonato'}
             </button>
           </div>
         </form>
@@ -372,7 +389,7 @@ export default function Championships({ championships, teams }) {
   // Opens the schedule modal instead of directly activating
   const activate = (champ) => setActivateModal(champ)
 
-  const doActivate = (champ, { startDate, playDays, matchesPerDay }) => {
+  const doActivate = (champ, { startDate, playDays, matchesPerDay, generateMatches }) => {
     setActivateModal(null)
     router.put(`/admin/campeonatos/${champ.id}`, {
       name:            champ.name,
@@ -380,6 +397,7 @@ export default function Championships({ championships, teams }) {
       start_date:      startDate || null,
       play_days:       playDays,
       matches_per_day: matchesPerDay,
+      generate_matches: generateMatches,
     })
   }
 

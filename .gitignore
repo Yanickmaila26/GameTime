@@ -1,45 +1,59 @@
-# Laravel
+# ─── Laravel ───────────────────────────────────────────────────────────────────
 /vendor/
-/public/build/
-/public/hot/
-/public/storage
+/.env
+/.env.backup
+/.env.production
+/.phpunit.result.cache
+/phpunit.result.cache
+/.phpunit.cache
+Homestead.json
+Homestead.yaml
+auth.json
+_ide_helper*.php
+.phpstorm.meta.php
+
+# Laravel compiled files
+/bootstrap/cache/*
+!/bootstrap/cache/.gitkeep
+
+# Laravel storage — ignore generated content, keep folder structure via .gitkeep
 /storage/*.key
+/storage/debugbar/
 /storage/app/public/
 /storage/framework/cache/
 /storage/framework/sessions/
 /storage/framework/testing/
 /storage/framework/views/
 /storage/logs/
-bootstrap/cache/*.php
-.env
-.env.backup
-.env.production
-.phpunit.cache
-_ide_helper*.php
-.phpstorm.meta.php
 
-# Node / Vite
+# ─── Vite / Node ───────────────────────────────────────────────────────────────
 node_modules/
+/public/build/
+/public/hot
+/public/storage
 dist/
 dist-ssr/
-*.local
+
+# Node debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
-# Editor
+# ─── Editor ────────────────────────────────────────────────────────────────────
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*.local
+.claude
 
-# OS
+# ─── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
 Thumbs.db
 *.cache
-.claude

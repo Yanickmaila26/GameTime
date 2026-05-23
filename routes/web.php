@@ -37,14 +37,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,directiv
     Route::put('/arbitros/{referee}', [RefereeController::class, 'update']);
     Route::delete('/arbitros/{referee}', [RefereeController::class, 'destroy']);
 
-    // Campeonatos
-    Route::get('/campeonatos', [ChampionshipController::class, 'index'])->name('championships');
-    Route::post('/campeonatos', [ChampionshipController::class, 'store']);
-    Route::put('/campeonatos/{championship}', [ChampionshipController::class, 'update']);
-    Route::delete('/campeonatos/{championship}', [ChampionshipController::class, 'destroy']);
-    Route::post('/campeonatos/{championship}/generar-playoffs', [ChampionshipController::class, 'generatePlayoffsFromGroup']);
-    Route::post('/campeonatos/{championship}/avanzar-ronda', [ChampionshipController::class, 'advanceKnockout']);
-    Route::post('/campeonatos/{championship}/partido-manual', [ChampionshipController::class, 'addManualMatch']);
+    // Campeonatos — las rutas GET/POST se definen al final (solo admin)
+    // (ver bloque role:admin abajo)
 
     // Partidos
     Route::get('/partidos', [MatchController::class, 'index'])->name('matches');
@@ -55,8 +49,20 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,directiv
     // Partido en vivo
     Route::get('/partidos/{match}/live', [MatchController::class, 'live'])->name('match.live');
     Route::post('/partidos/{match}/start', [MatchController::class, 'start'])->name('match.start');
+    Route::post('/partidos/{match}/guardar-cuarto', [MatchController::class, 'saveBatch'])->name('match.save-batch');
     Route::post('/partidos/{match}/score', [MatchController::class, 'score'])->name('match.score');
     Route::post('/partidos/{match}/foul', [MatchController::class, 'foul'])->name('match.foul');
     Route::post('/partidos/{match}/next-quarter', [MatchController::class, 'nextQuarter'])->name('match.next-quarter');
     Route::post('/partidos/{match}/finish', [MatchController::class, 'finish'])->name('match.finish');
+
+    // Rutas solo para admin (no directiva)
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/campeonatos', [ChampionshipController::class, 'index'])->name('championships');
+        Route::post('/campeonatos', [ChampionshipController::class, 'store']);
+        Route::put('/campeonatos/{championship}', [ChampionshipController::class, 'update']);
+        Route::delete('/campeonatos/{championship}', [ChampionshipController::class, 'destroy']);
+        Route::post('/campeonatos/{championship}/generar-playoffs', [ChampionshipController::class, 'generatePlayoffsFromGroup']);
+        Route::post('/campeonatos/{championship}/avanzar-ronda', [ChampionshipController::class, 'advanceKnockout']);
+        Route::post('/campeonatos/{championship}/partido-manual', [ChampionshipController::class, 'addManualMatch']);
+    });
 });

@@ -4,30 +4,60 @@ import { X, Play, Clock, ShieldAlert, Award } from 'lucide-react';
 export default function GameSheetModal({ isOpen, onClose, match, homeTeamData, awayTeamData }) {
   if (!isOpen) return null;
 
-  // Quarters score breakdown
+  // Dynamic players list mapped from team roster and match statistics
+  const matchPlayers = match.players || [];
+
+  const homePlayers = (homeTeamData.players || []).map(p => {
+    const stats = matchPlayers.find(mp => mp.player_id === p.id) || { points: 0, fouls: 0, is_ejected: false };
+    return {
+      name: p.name,
+      number: p.number,
+      pts: stats.points ?? 0,
+      fouls: stats.fouls ?? 0,
+      is_ejected: stats.is_ejected ?? false,
+    };
+  }).sort((a, b) => b.pts - a.pts);
+
+  const awayPlayers = (awayTeamData.players || []).map(p => {
+    const stats = matchPlayers.find(mp => mp.player_id === p.id) || { points: 0, fouls: 0, is_ejected: false };
+    return {
+      name: p.name,
+      number: p.number,
+      pts: stats.points ?? 0,
+      fouls: stats.fouls ?? 0,
+      is_ejected: stats.is_ejected ?? false,
+    };
+  }).sort((a, b) => b.pts - a.pts);
+
+  // Dynamic Quarters score breakdown from events snapshots
+  const getQuarterScores = (q) => {
+    const qEvents = (match.events || []).filter(e => e.time === `Q${q}` && e.score);
+    if (qEvents.length > 0) {
+      const lastEvent = qEvents[qEvents.length - 1];
+      const [h, a] = lastEvent.score.split(' - ').map(Number);
+      return { home: h, away: a };
+    }
+    return null;
+  };
+
+  const q1 = getQuarterScores(1);
+  const q2 = getQuarterScores(2);
+  const q3 = getQuarterScores(3);
+  const q4 = getQuarterScores(4);
+
   const quarters = [
-    { name: '1C', home: 18, away: 16 },
-    { name: '2C', home: 20, away: 18 },
-    { name: '3C', home: match.homeScore - 38, away: match.awayScore - 34 },
-    { name: '4C', home: '-', away: '-' }
+    { name: '1C', home: q1 ? q1.home : (match.quarter === 'Programado' ? '-' : 0), away: q1 ? q1.away : (match.quarter === 'Programado' ? '-' : 0) },
+    { name: '2C', home: q2 ? q2.home : (q1 ? q1.home : '-'), away: q2 ? q2.away : (q1 ? q1.away : '-') },
+    { name: '3C', home: q3 ? q3.home : (q2 ? q2.home : '-'), away: q3 ? q3.away : (q2 ? q2.away : '-') },
+    { name: '4C', home: q4 ? q4.home : (q3 ? q3.home : '-'), away: q4 ? q4.away : (q3 ? q3.away : '-') },
   ];
 
-  // Mock players stats for the game
-  const homePlayers = [
-    { name: 'M. Gómez', pts: 18, fouls: 2, number: 7 },
-    { name: 'D. Valencia', pts: 12, fouls: 1, number: 10 },
-    { name: 'L. Benavides', pts: 8, fouls: 3, number: 15 },
-    { name: 'J. Carabalí', pts: 10, fouls: 4, number: 33 },
-    { name: 'A. Ibarra', pts: 8, fouls: 2, number: 22 }
-  ];
-
-  const awayPlayers = [
-    { name: 'Juan Pérez', pts: 24, fouls: 3, number: 9 },
-    { name: 'Carlos Díaz', pts: 12, fouls: 2, number: 4 },
-    { name: 'Andrés Rosero', pts: 6, fouls: 4, number: 12 },
-    { name: 'Diego Mejía', pts: 8, fouls: 1, number: 11 },
-    { name: 'Javier Luna', pts: 2, fouls: 5, number: 14 } // Expulsado
-  ];
+  // Dynamic MVP calculation: highest points from the winning team
+  const winningTeamId = match.homeScore > match.awayScore ? homeTeamData.id : awayTeamData.id;
+  const winningPlayers = (winningTeamId === homeTeamData.id ? homePlayers : awayPlayers);
+  const mvpPlayer = winningPlayers.length > 0 ? winningPlayers[0] : null;
+  const isFinished = match.quarter === 'Finalizado';
+  const showMvp = isFinished && mvpPlayer && mvpPlayer.pts > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black bg-opacity-75 backdrop-blur-sm p-0 sm:p-4">
@@ -99,6 +129,36 @@ export default function GameSheetModal({ isOpen, onClose, match, homeTeamData, a
               <span className="text-[10px] text-gray-500 font-bold">Visita</span>
             </div>
           </div>
+
+          {/* MVP Card */}
+          {showMvp && (
+            <div className="bg-gradient-to-r from-basketball/20 to-amber-500/10 border border-basketball/40 rounded-2xl p-4 flex items-center justify-between">
+              <div className="flex items-center space-x-3.5">
+                <div className="w-12 h-12 rounded-full bg-basketball text-black font-black flex items-center justify-center border-2 border-basketball shadow-lg">
+                  <Award className="w-6 h-6" />
+                </div>
+                <div>
+                  <span className="text-[9px] uppercase font-black text-basketball tracking-widest block">
+                    MVP del Partido (Oficial)
+                  </span>
+                  <h4 className="font-extrabold text-xs text-white mt-0.5">
+                    {mvpPlayer.name}
+                  </h4>
+                  <p className="text-[10px] text-gray-400">
+                    #{mvpPlayer.number} · {winningTeamId === homeTeamData.id ? homeTeamData.name : awayTeamData.name}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="block text-xl font-black text-basketball tracking-tighter leading-none">
+                  {mvpPlayer.pts}
+                </span>
+                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
+                  Puntos
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Quarters Grid */}
           <div className="space-y-2">
