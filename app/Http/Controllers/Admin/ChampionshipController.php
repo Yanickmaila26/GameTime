@@ -78,6 +78,7 @@ class ChampionshipController extends Controller
         $oldStatus = $championship->status;
         $newStatus = $data['status'] ?? $championship->status;
 
+        /*
         if ($newStatus === 'active' && $oldStatus === 'draft') {
             // Validate all teams in the championship have at least 2 players
             $teams = $championship->teams()->with('players')->get();
@@ -92,6 +93,7 @@ class ChampionshipController extends Controller
                 ], 422);
             }
         }
+        */
 
         $championship->update(array_filter([
             'name'           => $data['name'],
