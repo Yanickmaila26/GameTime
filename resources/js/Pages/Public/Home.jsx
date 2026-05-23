@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { Link } from '@inertiajs/react'
 import ThreeBasketball from '../../Components/ThreeBasketball'
+import Lightning from '../../Components/Lightning'
 import BottomNav from '../../Components/BottomNav'
 import LiveGameCard from '../../Components/LiveGameCard'
 import GameSheetModal from '../../Components/GameSheetModal'
@@ -198,6 +199,17 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
       
       {/* 3D WebGL rotating basketball */}
       <ThreeBasketball />
+
+      {/* Dynamic Electric Lightning WebGL Background */}
+      <div className="fixed inset-0 w-full h-full z-0 pointer-events-none opacity-30">
+        <Lightning
+          hue={219}
+          xOffset={0}
+          speed={0.4}
+          intensity={2.2}
+          size={1}
+        />
+      </div>
 
       {/* Floating Neon Sunset Glow Background elements */}
       <div className="fixed top-0 right-0 w-[45vw] h-[60vh] bg-gradient-to-br from-basketball-dark/20 to-transparent opacity-15 blur-3xl pointer-events-none z-0" />
