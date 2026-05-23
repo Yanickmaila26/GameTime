@@ -6,7 +6,7 @@ export default function ThreeBasketball() {
   const scrollProgressRef = useRef(0);
   const targetPosRef = useRef({ x: 1.2, y: 0.2, z: 0 });
   const targetScaleRef = useRef(1.3);
-  
+
   // Track scroll and window size to update target position and scale dynamically
   useEffect(() => {
     const updateTargets = () => {
@@ -46,7 +46,7 @@ export default function ThreeBasketball() {
 
     window.addEventListener('scroll', updateTargets, { passive: true });
     window.addEventListener('resize', updateTargets);
-    
+
     // Initial call to set positions correctly
     updateTargets();
 
@@ -62,9 +62,9 @@ export default function ThreeBasketball() {
     // 1. Setup Scene, Camera, Renderer
     const width = containerRef.current.clientWidth;
     const height = containerRef.current.clientHeight;
-    
+
     const scene = new THREE.Scene();
-    
+
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
     camera.position.z = 6;
 
@@ -76,13 +76,13 @@ export default function ThreeBasketball() {
     // 2. Procedural Basketball Texture Generator
     const createBasketballTextures = () => {
       const size = 1024;
-      
+
       // Color texture canvas
       const canvas = document.createElement('canvas');
       canvas.width = size;
       canvas.height = size / 2;
       const ctx = canvas.getContext('2d');
-      
+
       // Bump map canvas (grayscale for depth)
       const bumpCanvas = document.createElement('canvas');
       bumpCanvas.width = size;
@@ -90,9 +90,9 @@ export default function ThreeBasketball() {
       const bumpCtx = bumpCanvas.getContext('2d');
 
       // Orange base color (burnt leather orange)
-      ctx.fillStyle = '#C84B1E'; 
+      ctx.fillStyle = '#C84B1E';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
+
       // Bump base (neutral middle gray/white)
       bumpCtx.fillStyle = '#E0E0E0';
       bumpCtx.fillRect(0, 0, bumpCanvas.width, bumpCanvas.height);
@@ -102,18 +102,18 @@ export default function ThreeBasketball() {
       const cols = 360;
       const cellWidth = canvas.width / cols;
       const cellHeight = canvas.height / rows;
-      
+
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           const x = (c + 0.5 + (Math.random() - 0.5) * 0.4) * cellWidth;
           const y = (r + 0.5 + (Math.random() - 0.5) * 0.4) * cellHeight;
           const radius = Math.min(cellWidth, cellHeight) * 0.42;
-          
+
           const colorVal = Math.random();
           let color = '#C84B1E';
           if (colorVal < 0.28) color = '#A63611'; // darker shadows
           else if (colorVal > 0.72) color = '#DC5E2C'; // lighter highlights
-          
+
           ctx.fillStyle = color;
           ctx.beginPath();
           ctx.arc(x, y, radius, 0, Math.PI * 2);
@@ -124,7 +124,7 @@ export default function ThreeBasketball() {
           bumpGrad.addColorStop(0, '#FFFFFF');
           bumpGrad.addColorStop(0.65, '#B0B0B0');
           bumpGrad.addColorStop(1, '#333333');
-          
+
           bumpCtx.fillStyle = bumpGrad;
           bumpCtx.beginPath();
           bumpCtx.arc(x, y, radius, 0, Math.PI * 2);
@@ -145,7 +145,7 @@ export default function ThreeBasketball() {
         const ny = Math.random() * canvas.height;
         ctx.fillRect(nx, ny, 1, 1);
       }
-      
+
       // Also apply pores to the bump map to give physical leather depth
       bumpCtx.fillStyle = 'rgba(0, 0, 0, 0.12)';
       for (let i = 0; i < 30000; i++) {
@@ -164,7 +164,7 @@ export default function ThreeBasketball() {
           context.lineWidth = lineWidth;
           context.lineCap = 'round';
           context.lineJoin = 'round';
-          
+
           // Horizontal line (Equator)
           context.beginPath();
           context.moveTo(0, h / 2);
@@ -204,7 +204,7 @@ export default function ThreeBasketball() {
 
         // Draw black line on color map
         drawLineOnCtx(ctx, '#080808', 12);
-        
+
         // Draw deep recessed black line on bump map (darker = deeper)
         drawLineOnCtx(bumpCtx, '#000000', 16);
       };
@@ -233,7 +233,7 @@ export default function ThreeBasketball() {
       sheenRoughness: 0.5,
       sheenColor: new THREE.Color('#FF7043'),
     });
-    
+
     const ball = new THREE.Mesh(geometry, material);
     scene.add(ball);
 
@@ -266,14 +266,14 @@ export default function ThreeBasketball() {
     // 5. Animation and Render Loop
     let animationFrameId;
     let lastTime = 0;
-    
+
     // Smooth interpolation variables
     const currentPos = { x: ball.position.x, y: ball.position.y, z: ball.position.z };
     let currentScale = ball.scale.x;
 
     const animate = (time) => {
       animationFrameId = requestAnimationFrame(animate);
-      
+
       const delta = (time - lastTime) / 1000 || 0;
       lastTime = time;
 
@@ -285,7 +285,7 @@ export default function ThreeBasketball() {
 
       // Smoothly interpolate position (Lerp)
       const lerpSpeed = 0.07; // Smooth factor
-      
+
       currentPos.x = THREE.MathUtils.lerp(currentPos.x, targetPosRef.current.x, lerpSpeed);
       currentPos.y = THREE.MathUtils.lerp(currentPos.y, targetPosRef.current.y, lerpSpeed);
       currentPos.z = THREE.MathUtils.lerp(currentPos.z, targetPosRef.current.z, lerpSpeed);
@@ -308,10 +308,10 @@ export default function ThreeBasketball() {
       if (!containerRef.current) return;
       const w = containerRef.current.clientWidth;
       const h = containerRef.current.clientHeight;
-      
+
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      
+
       renderer.setSize(w, h);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
@@ -342,8 +342,8 @@ export default function ThreeBasketball() {
   }, []);
 
   return (
-    <div 
-      ref={containerRef} 
+    <div
+      ref={containerRef}
       className="fixed inset-0 w-full h-full z-0 pointer-events-none"
     />
   );

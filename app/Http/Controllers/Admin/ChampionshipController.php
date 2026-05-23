@@ -61,15 +61,29 @@ class ChampionshipController extends Controller
     public function update(Request $request, Championship $championship)
     {
         $data = $request->validate([
-            'name'           => 'required|string|max:150',
-            'status'         => 'in:draft,active,finished',
-            'start_date'     => 'nullable|date',
-            'play_days'      => 'nullable|array',
-            'play_days.*'    => 'integer|min:0|max:6',
-            'matches_per_day'=> 'nullable|integer|min:1|max:20',
+            'name'             => 'required|string|max:150',
+            'status'           => 'in:draft,active,finished',
+            'start_date'       => 'nullable|date',
+            'play_days'        => 'nullable|array',
+            'play_days.*'      => 'integer|min:0|max:6',
+            'matches_per_day'  => 'nullable|integer|min:1|max:20',
+            'generate_matches' => 'nullable|boolean',
         ]);
 
         $oldStatus = $championship->status;
+        $newStatus = $data['status'] ?? $championship->status;
+
+        if ($newStatus === 'active' && $oldStatus === 'draft') {
+            // Validate all teams in the championship have at least 2 players
+            $teams = $championship->teams()->with('players')->get();
+            $invalidTeams = $teams->filter(fn($t) => $t->players->count() < 2);
+            if ($invalidTeams->isNotEmpty()) {
+                $names = $invalidTeams->pluck('name')->join(', ');
+                return back()->withErrors([
+                    'status' => "Los siguientes equipos tienen menos de 2 jugadores: {$names}. Agrega jugadores antes de iniciar."
+                ]);
+            }
+        }
 
         $championship->update(array_filter([
             'name'           => $data['name'],
@@ -80,7 +94,10 @@ class ChampionshipController extends Controller
         ], fn($v) => !is_null($v)));
 
         if ($championship->status === 'active' && $oldStatus === 'draft') {
-            $this->generateInitialMatches($championship);
+            $generateMatches = filter_var($request->input('generate_matches', true), FILTER_VALIDATE_BOOLEAN);
+            if ($generateMatches) {
+                $this->generateInitialMatches($championship);
+            }
         }
 
         return back()->with('success', 'Campeonato actualizado.');
@@ -96,15 +113,6 @@ class ChampionshipController extends Controller
     {
         $teams     = $championship->teams()->with('players')->get()->shuffle()->all();
         $teamCount = count($teams);
-
-        // Validate every team has at least 2 active players
-        $invalidTeams = collect($teams)->filter(fn($t) => $t->players->count() < 2);
-        if ($invalidTeams->isNotEmpty()) {
-            // Revert to draft so the user can fix it
-            $championship->update(['status' => 'draft']);
-            $names = $invalidTeams->pluck('name')->join(', ');
-            abort(422, "Los siguientes equipos tienen menos de 2 jugadores: {$names}. Agrega jugadores antes de iniciar.");
-        }
 
         // --- Build an ordered list of scheduled dates ---
         $scheduledDates = $this->buildScheduleDates(

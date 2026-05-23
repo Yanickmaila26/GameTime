@@ -2,6 +2,15 @@ import React from 'react';
 import { Flame, Target, Sparkles, Trophy } from 'lucide-react';
 
 export default function LeadersTab({ leaders }) {
+  const hasData = (leaders?.scorers?.length > 0 || leaders?.threepointers?.length > 0 || leaders?.rebounders?.length > 0);
+  if (!hasData) {
+    return (
+      <div className="text-center py-12 text-xs text-gray-500 font-bold bg-gray-950/40 border border-gray-900 rounded-3xl">
+        Aún no hay estadísticas individuales registradas para este campeonato.
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Tab intro title */}
@@ -137,11 +146,11 @@ export default function LeadersTab({ leaders }) {
         </div>
       </div>
 
-      {/* 3. Reboteadores Card (Adición Premium) */}
+      {/* 3. Faltas Card (Adición Premium) */}
       <div className="space-y-2 pt-1">
         <div className="flex items-center space-x-1.5 text-xs font-black text-gray-400">
           <Sparkles className="w-4 h-4 text-amber-500" />
-          <span className="uppercase tracking-wider">Líderes en Rebotes</span>
+          <span className="uppercase tracking-wider">Líderes en Faltas Personales</span>
         </div>
 
         <div className="grid grid-cols-1 gap-2.5">
@@ -190,7 +199,7 @@ export default function LeadersTab({ leaders }) {
                   {player.rpg}
                 </span>
                 <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
-                  RPG ({player.total} Totales)
+                  FPP ({player.total} Totales)
                 </span>
               </div>
             </div>
