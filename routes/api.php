@@ -53,6 +53,23 @@ Route::get('/test-index', function () {
     }
 });
 
+Route::get('/view-logs', function () {
+    try {
+        $logPath = storage_path('logs/laravel.log');
+        if (!file_exists($logPath)) {
+            return response()->json(['status' => 'error', 'message' => 'No log file found.']);
+        }
+        $content = file_get_contents($logPath);
+        return response(substr($content, -30000))
+            ->header('Content-Type', 'text/plain');
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage()
+        ], 500);
+    }
+});
+
 // ─── Público ────────────────────────────────────────────────────────────────
 Route::get('/home', [PublicController::class, 'home']);
 
