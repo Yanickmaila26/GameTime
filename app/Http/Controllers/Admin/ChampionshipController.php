@@ -29,47 +29,56 @@ class ChampionshipController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'name'            => 'required|string|max:150',
-            'gender'          => 'required|in:masculino,femenino,mixto',
-            'has_group_stage' => 'boolean',
-            'rounds'          => 'integer|min:1|max:10',
-            'has_third_place' => 'boolean',
-            'team_ids'        => 'array|min:2',
-            'team_ids.*'      => 'exists:teams,id',
-        ]);
+        try {
+            $data = $request->validate([
+                'name'            => 'required|string|max:150',
+                'gender'          => 'required|in:masculino,femenino,mixto',
+                'has_group_stage' => 'boolean',
+                'rounds'          => 'integer|min:1|max:10',
+                'has_third_place' => 'boolean',
+                'team_ids'        => 'array|min:2',
+                'team_ids.*'      => 'exists:teams,id',
+            ]);
 
-        $hasGroupStage = $data['has_group_stage'] ?? false;
-        $teamCount     = count($data['team_ids'] ?? []);
+            $hasGroupStage = $data['has_group_stage'] ?? false;
+            $teamCount     = count($data['team_ids'] ?? []);
 
-        // Knockout requires exactly 4, 8, 16 or 32 teams
-        if (!$hasGroupStage && !in_array($teamCount, [4, 8, 16, 32])) {
+            // Knockout requires exactly 4, 8, 16 or 32 teams
+            if (!$hasGroupStage && !in_array($teamCount, [4, 8, 16, 32])) {
+                return response()->json([
+                    'message' => 'Error de validación.',
+                    'errors' => [
+                        'team_ids' => ["La eliminación directa requiere exactamente 4, 8, 16 o 32 equipos. Se seleccionaron: {$teamCount}."]
+                    ]
+                ], 422);
+            }
+
+            $championship = Championship::create([
+                'name'            => $data['name'],
+                'gender'          => $data['gender'],
+                'total_teams'     => $teamCount,
+                'has_group_stage' => $hasGroupStage,
+                'rounds'          => $data['rounds'] ?? 1,
+                'has_third_place' => $data['has_third_place'] ?? false,
+                'created_by'      => auth()->id(),
+            ]);
+
+            if (!empty($data['team_ids'])) {
+                $championship->teams()->attach($data['team_ids']);
+            }
+
             return response()->json([
-                'message' => 'Error de validación.',
-                'errors' => [
-                    'team_ids' => ["La eliminación directa requiere exactamente 4, 8, 16 o 32 equipos. Se seleccionaron: {$teamCount}."]
-                ]
-            ], 422);
+                'message' => 'Campeonato creado.',
+                'championship' => $championship
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Internal Server Error in Store',
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], 500);
         }
-
-        $championship = Championship::create([
-            'name'            => $data['name'],
-            'gender'          => $data['gender'],
-            'total_teams'     => $teamCount,
-            'has_group_stage' => $hasGroupStage,
-            'rounds'          => $data['rounds'] ?? 1,
-            'has_third_place' => $data['has_third_place'] ?? false,
-            'created_by'      => auth()->id(),
-        ]);
-
-        if (!empty($data['team_ids'])) {
-            $championship->teams()->attach($data['team_ids']);
-        }
-
-        return response()->json([
-            'message' => 'Campeonato creado.',
-            'championship' => $championship
-        ]);
     }
 
     public function update(Request $request, Championship $championship)
