@@ -32,6 +32,27 @@ Route::get('/run-migrations', function () {
     }
 });
 
+Route::get('/test-index', function () {
+    try {
+        $championships = \App\Models\Championship::with(['teams', 'creator', 'matches.homeTeam', 'matches.awayTeam'])->latest()->get();
+        $teams = \App\Models\Team::where('active', true)->orderBy('name')->get();
+        return response()->json([
+            'status' => 'success',
+            'count_championships' => $championships->count(),
+            'count_teams' => $teams->count(),
+            'championships' => $championships,
+            'teams' => $teams
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ], 500);
+    }
+});
+
 // ─── Público ────────────────────────────────────────────────────────────────
 Route::get('/home', [PublicController::class, 'home']);
 
