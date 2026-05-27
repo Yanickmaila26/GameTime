@@ -20,7 +20,7 @@ class MatchController extends Controller
             'matches' => Game::with(['homeTeam', 'awayTeam', 'championship', 'referee'])
                 ->orderBy('scheduled_at')
                 ->get(),
-            'championships' => Championship::where('status', '!=', 'finished')->get(),
+            'championships' => Championship::with('teams')->where('status', '!=', 'finished')->get(),
             'teams' => Team::whereRaw('active = true')->orderBy('name')->get(),
             'referees' => Referee::where('status', 'activo')->orderBy('name')->get(),
         ]);
@@ -38,6 +38,7 @@ class MatchController extends Controller
             'ref2_id' => 'nullable|exists:referees,id',
             'court' => 'nullable|string|max:150',
             'scheduled_at' => 'nullable|date',
+            'group_name' => 'nullable|string|max:50',
         ]);
 
         $match = Game::create($data);
@@ -50,13 +51,23 @@ class MatchController extends Controller
 
     public function update(Request $request, Game $match)
     {
-        $data = $request->validate([
+        $rules = [
             'court' => 'nullable|string|max:150',
             'scheduled_at' => 'nullable|date',
             'referee_id' => 'nullable|exists:referees,id',
             'ref1_id' => 'nullable|exists:referees,id',
             'ref2_id' => 'nullable|exists:referees,id',
-        ]);
+        ];
+
+        if ($match->status === 'scheduled') {
+            $rules['championship_id'] = 'required|exists:championships,id';
+            $rules['round']           = 'required|integer|min:1';
+            $rules['home_team_id']     = 'required|exists:teams,id|different:away_team_id';
+            $rules['away_team_id']     = 'required|exists:teams,id';
+            $rules['group_name']       = 'nullable|string|max:50';
+        }
+
+        $data = $request->validate($rules);
 
         $match->update($data);
 
