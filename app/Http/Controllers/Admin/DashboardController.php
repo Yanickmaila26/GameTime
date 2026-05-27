@@ -32,7 +32,7 @@ class DashboardController extends Controller
         return response()->json([
             'role' => 'admin',
             'stats' => [
-                'teams'         => Team::where('active', true)->count(),
+                'teams'         => Team::whereRaw('active = true')->count(),
                 'players'       => Player::count(),
                 'championships' => Championship::count(),
                 'liveMatches'   => Game::where('status', 'live')->count(),

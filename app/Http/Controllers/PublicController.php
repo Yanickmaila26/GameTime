@@ -46,7 +46,7 @@ class PublicController extends Controller
             ->take(5)
             ->get();
 
-        $teams = Team::where('active', true)->get();
+        $teams = Team::whereRaw('active = true')->get();
 
         // 1. Scorers (Sum of points in match_players)
         $scorers = \App\Models\MatchPlayer::selectRaw('player_id, SUM(points) as total_points, COUNT(match_id) as games_played, AVG(points) as ppg')

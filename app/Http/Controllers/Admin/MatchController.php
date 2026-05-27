@@ -21,7 +21,7 @@ class MatchController extends Controller
                 ->orderBy('scheduled_at')
                 ->get(),
             'championships' => Championship::where('status', '!=', 'finished')->get(),
-            'teams' => Team::where('active', true)->orderBy('name')->get(),
+            'teams' => Team::whereRaw('active = true')->orderBy('name')->get(),
             'referees' => Referee::where('status', 'activo')->orderBy('name')->get(),
         ]);
     }

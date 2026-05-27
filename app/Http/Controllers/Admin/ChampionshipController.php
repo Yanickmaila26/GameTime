@@ -15,7 +15,7 @@ class ChampionshipController extends Controller
         try {
             return response()->json([
                 'championships' => Championship::with(['teams', 'creator', 'matches.homeTeam', 'matches.awayTeam'])->latest()->get(),
-                'teams' => Team::where('active', true)->orderBy('name')->get(),
+                'teams' => Team::whereRaw('active = true')->orderBy('name')->get(),
             ]);
         } catch (\Throwable $e) {
             return response()->json([
