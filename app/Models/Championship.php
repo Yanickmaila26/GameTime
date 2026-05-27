@@ -29,7 +29,7 @@ class Championship extends Model
     public function teams()
     {
         return $this->belongsToMany(Team::class, 'championship_teams')
-            ->withPivot(['seed', 'pj', 'pg', 'pp', 'pts', 'dif'])
+            ->withPivot(['seed', 'pj', 'pg', 'pp', 'pts', 'dif', 'group_name'])
             ->orderByPivot('pts', 'desc');
     }
 

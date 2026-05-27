@@ -36,12 +36,38 @@ class ChampionshipController extends Controller
                 'has_group_stage' => 'boolean',
                 'rounds'          => 'integer|min:1|max:10',
                 'has_third_place' => 'boolean',
-                'team_ids'        => 'array|min:2',
+                'team_ids'        => 'nullable|array',
                 'team_ids.*'      => 'exists:teams,id',
+                'groups'          => 'nullable|array',
             ]);
 
             $hasGroupStage = $data['has_group_stage'] ?? false;
-            $teamCount     = count($data['team_ids'] ?? []);
+            
+            $teamIds = [];
+            $groupsData = [];
+
+            if ($request->has('groups') && is_array($request->input('groups'))) {
+                $groupsData = $request->input('groups');
+                foreach ($groupsData as $groupName => $ids) {
+                    if (is_array($ids)) {
+                        $teamIds = array_merge($teamIds, $ids);
+                    }
+                }
+                $teamIds = array_unique($teamIds);
+            } else {
+                $teamIds = $data['team_ids'] ?? [];
+            }
+
+            $teamCount = count($teamIds);
+
+            if ($teamCount < 2) {
+                return response()->json([
+                    'message' => 'Error de validación.',
+                    'errors' => [
+                        'team_ids' => ["Se necesitan al menos 2 equipos para crear el campeonato."]
+                    ]
+                ], 422);
+            }
 
             // Knockout requires exactly 4, 8, 16 or 32 teams
             if (!$hasGroupStage && !in_array($teamCount, [4, 8, 16, 32])) {
@@ -63,8 +89,18 @@ class ChampionshipController extends Controller
                 'created_by'      => auth()->id(),
             ]);
 
-            if (!empty($data['team_ids'])) {
-                $championship->teams()->attach($data['team_ids']);
+            if (!empty($groupsData)) {
+                foreach ($groupsData as $groupName => $ids) {
+                    if (is_array($ids)) {
+                        foreach ($ids as $id) {
+                            $championship->teams()->attach($id, ['group_name' => $groupName]);
+                        }
+                    }
+                }
+            } else {
+                if (!empty($teamIds)) {
+                    $championship->teams()->attach($teamIds);
+                }
             }
 
             return response()->json([
@@ -144,8 +180,8 @@ class ChampionshipController extends Controller
 
     private function generateInitialMatches(Championship $championship)
     {
-        $teams     = $championship->teams()->with('players')->get()->shuffle()->all();
-        $teamCount = count($teams);
+        $teams = $championship->teams()->with('players')->get();
+        $hasGroups = $teams->contains(fn($t) => !empty($t->pivot->group_name));
 
         // --- Build an ordered list of scheduled dates ---
         $scheduledDates = $this->buildScheduleDates(
@@ -156,50 +192,68 @@ class ChampionshipController extends Controller
         $dateIndex = 0;
 
         if ($championship->has_group_stage) {
-            if ($teamCount < 2) return;
-
-            $teamsList = $teams;
-            if ($teamCount % 2 !== 0) {
-                $teamsList[] = null; // bye
+            // Group teams by group_name, fallback to A if group_name is not set but hasGroups is true
+            $groupedTeams = [];
+            if ($hasGroups) {
+                foreach ($teams as $team) {
+                    $groupName = $team->pivot->group_name ?? 'A';
+                    $groupedTeams[$groupName][] = $team;
+                }
+            } else {
+                $groupedTeams['A'] = $teams->all();
             }
-            $n      = count($teamsList);
-            $vueltas = $championship->rounds ?? 1;
 
-            for ($v = 0; $v < $vueltas; $v++) {
-                $tempTeams = $teamsList;
-                for ($r = 0; $r < $n - 1; $r++) {
-                    $roundNum = ($v * ($n - 1)) + $r + 1;
+            foreach ($groupedTeams as $groupName => $groupTeams) {
+                $groupTeams = collect($groupTeams)->shuffle()->all();
+                $teamCount = count($groupTeams);
+                if ($teamCount < 2) continue;
 
-                    for ($i = 0; $i < $n / 2; $i++) {
-                        $home = $tempTeams[$i];
-                        $away = $tempTeams[$n - 1 - $i];
+                $teamsList = $groupTeams;
+                if ($teamCount % 2 !== 0) {
+                    $teamsList[] = null; // bye
+                }
+                $n      = count($teamsList);
+                $vueltas = $championship->rounds ?? 1;
 
-                        if ($home !== null && $away !== null) {
-                            $homeId = ($v % 2 === 1) ? $away->id : $home->id;
-                            $awayId = ($v % 2 === 1) ? $home->id : $away->id;
+                for ($v = 0; $v < $vueltas; $v++) {
+                    $tempTeams = $teamsList;
+                    for ($r = 0; $r < $n - 1; $r++) {
+                        $roundNum = ($v * ($n - 1)) + $r + 1;
 
-                            $scheduledAt = isset($scheduledDates[$dateIndex]) ? $scheduledDates[$dateIndex] : null;
-                            $dateIndex++;
+                        for ($i = 0; $i < $n / 2; $i++) {
+                            $home = $tempTeams[$i];
+                            $away = $tempTeams[$n - 1 - $i];
 
-                            Game::create([
-                                'championship_id' => $championship->id,
-                                'round'           => $roundNum,
-                                'home_team_id'    => $homeId,
-                                'away_team_id'    => $awayId,
-                                'stage'           => 'group',
-                                'status'          => 'scheduled',
-                                'scheduled_at'    => $scheduledAt,
-                            ]);
+                            if ($home !== null && $away !== null) {
+                                $homeId = ($v % 2 === 1) ? $away->id : $home->id;
+                                $awayId = ($v % 2 === 1) ? $home->id : $away->id;
+
+                                $scheduledAt = isset($scheduledDates[$dateIndex]) ? $scheduledDates[$dateIndex] : null;
+                                $dateIndex++;
+
+                                Game::create([
+                                    'championship_id' => $championship->id,
+                                    'round'           => $roundNum,
+                                    'home_team_id'    => $homeId,
+                                    'away_team_id'    => $awayId,
+                                    'stage'           => 'group',
+                                    'group_name'      => $hasGroups ? $groupName : null,
+                                    'status'          => 'scheduled',
+                                    'scheduled_at'    => $scheduledAt,
+                                ]);
+                            }
                         }
-                    }
 
-                    // Rotate list (keep first element fixed)
-                    $last = array_pop($tempTeams);
-                    array_splice($tempTeams, 1, 0, [$last]);
+                        // Rotate list (keep first element fixed)
+                        $last = array_pop($tempTeams);
+                        array_splice($tempTeams, 1, 0, [$last]);
+                    }
                 }
             }
         } else {
             // Direct Knockout
+            $teamsArray = $teams->shuffle()->all();
+            $teamCount = count($teamsArray);
             if (!in_array($teamCount, [4, 8, 16, 32])) {
                 abort(400, 'El número de equipos para eliminación directa debe ser 4, 8, 16 o 32.');
             }
@@ -213,8 +267,8 @@ class ChampionshipController extends Controller
                 Game::create([
                     'championship_id' => $championship->id,
                     'round'           => 1,
-                    'home_team_id'    => $teams[$i]->id,
-                    'away_team_id'    => $teams[$i + 1]->id,
+                    'home_team_id'    => $teamsArray[$i]->id,
+                    'away_team_id'    => $teamsArray[$i + 1]->id,
                     'stage'           => 'playoff',
                     'label'           => $label,
                     'status'          => 'scheduled',
@@ -389,14 +443,8 @@ class ChampionshipController extends Controller
         ]);
 
         $limit = (int) $data['limit'];
-        $orderedTeams = $championship->teams()->get(); // Ordered by pts desc in relationship
-
-        if ($orderedTeams->count() < $limit) {
-            return response()->json([
-                'message' => 'Error.',
-                'errors' => ['error' => ["Se necesitan al menos {$limit} equipos para generar esta eliminatoria."]]
-            ], 422);
-        }
+        $teams = $championship->teams()->get();
+        $hasGroups = $teams->contains(fn($t) => !empty($t->pivot->group_name));
 
         $exists = Game::where('championship_id', $championship->id)->where('stage', 'playoff')->exists();
         if ($exists) {
@@ -408,19 +456,180 @@ class ChampionshipController extends Controller
 
         $label = $limit === 4 ? 'Semifinal' : 'Cuartos de Final';
 
-        for ($i = 0; $i < $limit / 2; $i++) {
-            $home = $orderedTeams[$i];
-            $away = $orderedTeams[$limit - 1 - $i];
+        if (!$hasGroups) {
+            if ($teams->count() < $limit) {
+                return response()->json([
+                    'message' => 'Error.',
+                    'errors' => ['error' => ["Se necesitan al menos {$limit} equipos para generar esta eliminatoria."]]
+                ], 422);
+            }
 
-            Game::create([
-                'championship_id' => $championship->id,
-                'round' => 1,
-                'home_team_id' => $home->id,
-                'away_team_id' => $away->id,
-                'stage' => 'playoff',
-                'label' => $label,
-                'status' => 'scheduled',
-            ]);
+            for ($i = 0; $i < $limit / 2; $i++) {
+                $home = $teams[$i];
+                $away = $teams[$limit - 1 - $i];
+
+                Game::create([
+                    'championship_id' => $championship->id,
+                    'round' => 1,
+                    'home_team_id' => $home->id,
+                    'away_team_id' => $away->id,
+                    'stage' => 'playoff',
+                    'label' => $label,
+                    'status' => 'scheduled',
+                ]);
+            }
+        } else {
+            // Group teams by their group name (A, B, C...)
+            $groupedTeams = [];
+            foreach ($teams as $team) {
+                $groupName = $team->pivot->group_name;
+                $groupedTeams[$groupName][] = $team;
+            }
+            ksort($groupedTeams);
+
+            $groupCount = count($groupedTeams);
+
+            if ($groupCount === 2) {
+                $keys = array_keys($groupedTeams);
+                $groupA = $groupedTeams[$keys[0]];
+                $groupB = $groupedTeams[$keys[1]];
+
+                if ($limit === 4) {
+                    if (count($groupA) < 2 || count($groupB) < 2) {
+                        return response()->json([
+                            'message' => 'Error.',
+                            'errors' => ['error' => ['Se necesitan al menos 2 equipos por grupo para Semifinal.']]
+                        ], 422);
+                    }
+
+                    // A1 vs B2
+                    Game::create([
+                        'championship_id' => $championship->id,
+                        'round' => 1,
+                        'home_team_id' => $groupA[0]->id,
+                        'away_team_id' => $groupB[1]->id,
+                        'stage' => 'playoff',
+                        'label' => $label,
+                        'status' => 'scheduled',
+                    ]);
+
+                    // B1 vs A2
+                    Game::create([
+                        'championship_id' => $championship->id,
+                        'round' => 1,
+                        'home_team_id' => $groupB[0]->id,
+                        'away_team_id' => $groupA[1]->id,
+                        'stage' => 'playoff',
+                        'label' => $label,
+                        'status' => 'scheduled',
+                    ]);
+                } else if ($limit === 8) {
+                    if (count($groupA) < 4 || count($groupB) < 4) {
+                        return response()->json([
+                            'message' => 'Error.',
+                            'errors' => ['error' => ['Se necesitan al menos 4 equipos por grupo para Cuartos de Final.']]
+                        ], 422);
+                    }
+
+                    // A1 vs B4, A2 vs B3, B1 vs A4, B2 vs A3
+                    $pairings = [
+                        [$groupA[0], $groupB[3]],
+                        [$groupA[1], $groupB[2]],
+                        [$groupB[0], $groupA[3]],
+                        [$groupB[1], $groupA[2]],
+                    ];
+
+                    foreach ($pairings as $pair) {
+                        Game::create([
+                            'championship_id' => $championship->id,
+                            'round' => 1,
+                            'home_team_id' => $pair[0]->id,
+                            'away_team_id' => $pair[1]->id,
+                            'stage' => 'playoff',
+                            'label' => $label,
+                            'status' => 'scheduled',
+                        ]);
+                    }
+                }
+            } else if ($groupCount === 4) {
+                $keys = array_keys($groupedTeams);
+                $groupA = $groupedTeams[$keys[0]];
+                $groupB = $groupedTeams[$keys[1]];
+                $groupC = $groupedTeams[$keys[2]];
+                $groupD = $groupedTeams[$keys[3]];
+
+                if ($limit === 4) {
+                    // Semis: A1 vs B1, C1 vs D1
+                    Game::create([
+                        'championship_id' => $championship->id,
+                        'round' => 1,
+                        'home_team_id' => $groupA[0]->id,
+                        'away_team_id' => $groupB[0]->id,
+                        'stage' => 'playoff',
+                        'label' => $label,
+                        'status' => 'scheduled',
+                    ]);
+
+                    Game::create([
+                        'championship_id' => $championship->id,
+                        'round' => 1,
+                        'home_team_id' => $groupC[0]->id,
+                        'away_team_id' => $groupD[0]->id,
+                        'stage' => 'playoff',
+                        'label' => $label,
+                        'status' => 'scheduled',
+                    ]);
+                } else if ($limit === 8) {
+                    if (count($groupA) < 2 || count($groupB) < 2 || count($groupC) < 2 || count($groupD) < 2) {
+                        return response()->json([
+                            'message' => 'Error.',
+                            'errors' => ['error' => ['Se necesitan al menos 2 equipos por grupo para Cuartos de Final.']]
+                        ], 422);
+                    }
+
+                    // A1 vs B2, B1 vs A2, C1 vs D2, D1 vs C2
+                    $pairings = [
+                        [$groupA[0], $groupB[1]],
+                        [$groupB[0], $groupA[1]],
+                        [$groupC[0], $groupD[1]],
+                        [$groupD[0], $groupC[1]],
+                    ];
+
+                    foreach ($pairings as $pair) {
+                        Game::create([
+                            'championship_id' => $championship->id,
+                            'round' => 1,
+                            'home_team_id' => $pair[0]->id,
+                            'away_team_id' => $pair[1]->id,
+                            'stage' => 'playoff',
+                            'label' => $label,
+                            'status' => 'scheduled',
+                        ]);
+                    }
+                }
+            } else {
+                if ($teams->count() < $limit) {
+                    return response()->json([
+                        'message' => 'Error.',
+                        'errors' => ['error' => ["Se necesitan al menos {$limit} equipos para generar los playoffs."]]
+                    ], 422);
+                }
+
+                for ($i = 0; $i < $limit / 2; $i++) {
+                    $home = $teams[$i];
+                    $away = $teams[$limit - 1 - $i];
+
+                    Game::create([
+                        'championship_id' => $championship->id,
+                        'round' => 1,
+                        'home_team_id' => $home->id,
+                        'away_team_id' => $away->id,
+                        'stage' => 'playoff',
+                        'label' => $label,
+                        'status' => 'scheduled',
+                    ]);
+                }
+            }
         }
 
         return response()->json([

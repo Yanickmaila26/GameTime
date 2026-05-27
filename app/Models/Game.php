@@ -13,7 +13,7 @@ class Game extends Model
         'referee_id', 'ref1_id', 'ref2_id', 'court', 'scheduled_at',
         'status', 'home_score', 'away_score', 'current_quarter',
         'home_fouls_q', 'away_fouls_q', 'started_at', 'finished_at',
-        'stage', 'label',
+        'stage', 'label', 'group_name',
     ];
 
     protected $casts = [

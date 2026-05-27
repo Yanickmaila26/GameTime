@@ -8,7 +8,7 @@ class ChampionshipTeam extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['championship_id', 'team_id', 'seed', 'pj', 'pg', 'pp', 'pts', 'dif'];
+    protected $fillable = ['championship_id', 'team_id', 'seed', 'pj', 'pg', 'pp', 'pts', 'dif', 'group_name'];
 
     public function championship()
     {
