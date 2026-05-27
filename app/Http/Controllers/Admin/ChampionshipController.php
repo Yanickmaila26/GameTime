@@ -648,6 +648,7 @@ class ChampionshipController extends Controller
             'court' => 'nullable|string|max:150',
             'scheduled_at' => 'nullable|date',
             'referee_id' => 'nullable|exists:referees,id',
+            'group_name' => 'nullable|string|max:50',
         ]);
 
         $game = Game::create(array_merge($data, [
