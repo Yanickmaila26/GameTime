@@ -17,7 +17,7 @@ class ChampionshipController extends Controller
                 'championships' => Championship::with(['teams', 'creator', 'matches.homeTeam', 'matches.awayTeam'])->latest()->get(),
                 'teams' => Team::where('active', true)->orderBy('name')->get(),
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'message' => 'Internal Server Error in Index',
                 'error' => $e->getMessage(),
