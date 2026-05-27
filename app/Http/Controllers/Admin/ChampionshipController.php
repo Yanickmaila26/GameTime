@@ -12,10 +12,19 @@ class ChampionshipController extends Controller
 {
     public function index()
     {
-        return response()->json([
-            'championships' => Championship::with(['teams', 'creator', 'matches.homeTeam', 'matches.awayTeam'])->latest()->get(),
-            'teams' => Team::where('active', true)->orderBy('name')->get(),
-        ]);
+        try {
+            return response()->json([
+                'championships' => Championship::with(['teams', 'creator', 'matches.homeTeam', 'matches.awayTeam'])->latest()->get(),
+                'teams' => Team::where('active', true)->orderBy('name')->get(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Internal Server Error in Index',
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], 500);
+        }
     }
 
     public function store(Request $request)
