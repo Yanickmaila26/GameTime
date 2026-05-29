@@ -11,13 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('championship_teams', function (Blueprint $table) {
-            $table->string('group_name', 50)->nullable()->after('team_id');
-        });
+        if (!Schema::hasColumn('championship_teams', 'group_name')) {
+            Schema::table('championship_teams', function (Blueprint $table) {
+                $table->string('group_name', 50)->nullable()->after('team_id');
+            });
+        }
 
-        Schema::table('matches', function (Blueprint $table) {
-            $table->string('group_name', 50)->nullable()->after('stage');
-        });
+        if (!Schema::hasColumn('matches', 'group_name')) {
+            Schema::table('matches', function (Blueprint $table) {
+                $table->string('group_name', 50)->nullable()->after('stage');
+            });
+        }
     }
 
     /**

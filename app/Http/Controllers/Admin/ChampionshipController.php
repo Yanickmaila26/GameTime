@@ -14,8 +14,13 @@ class ChampionshipController extends Controller
     {
         try {
             return response()->json([
-                'championships' => Championship::with(['teams', 'creator', 'matches.homeTeam', 'matches.awayTeam'])->latest()->get(),
-                'teams' => Team::whereRaw('active = true')->orderBy('name')->get(),
+                'championships' => Championship::with([
+                    'teams:id,name,short_name,logo_color,logo_url',
+                    'creator:id,name',
+                    'matches.homeTeam:id,name,short_name,logo_color,logo_url',
+                    'matches.awayTeam:id,name,short_name,logo_color,logo_url'
+                ])->latest()->get(),
+                'teams' => Team::where('active', true)->select('id', 'name', 'short_name', 'logo_color', 'logo_url')->orderBy('name')->get(),
             ]);
         } catch (\Throwable $e) {
             return response()->json([
