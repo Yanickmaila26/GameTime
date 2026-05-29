@@ -72,3 +72,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,directiv
         Route::post('/campeonatos/{championship}/partido-manual', [ChampionshipController::class, 'addManualMatch']);
     });
 });
+
+// Fallback route to serve public storage files when the storage link symlink is missing
+Route::get('/storage/{path}', function ($path) {
+    if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+        return response()->file(storage_path('app/public/' . $path));
+    }
+    abort(404);
+})->where('path', '.*');
