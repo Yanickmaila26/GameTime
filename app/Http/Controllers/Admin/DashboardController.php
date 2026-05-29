@@ -32,16 +32,23 @@ class DashboardController extends Controller
         return response()->json([
             'role' => 'admin',
             'stats' => [
-                'teams'         => Team::whereRaw('active = true')->count(),
+                'teams'         => Team::where('active', true)->count(),
                 'players'       => Player::count(),
                 'championships' => Championship::count(),
                 'liveMatches'   => Game::where('status', 'live')->count(),
             ],
             'liveMatches' => Game::where('status', 'live')
-                ->with(['homeTeam', 'awayTeam', 'championship'])
+                ->with([
+                    'homeTeam:id,name,short_name,logo_color,logo_url',
+                    'awayTeam:id,name,short_name,logo_color,logo_url',
+                    'championship:id,name,status'
+                ])
                 ->get(),
             'upcomingMatches' => Game::where('status', 'scheduled')
-                ->with(['homeTeam', 'awayTeam'])
+                ->with([
+                    'homeTeam:id,name,short_name,logo_color,logo_url',
+                    'awayTeam:id,name,short_name,logo_color,logo_url'
+                ])
                 ->orderBy('scheduled_at')
                 ->take(5)
                 ->get(),

@@ -31,11 +31,12 @@ class MultimediaController extends Controller
 
         if ($request->hasFile('files')) {
             foreach ($request->file('files') as $file) {
-                $path = $file->store('multimedia', 'public');
+                // Read and encode to Base64 to make it persistent on ephemeral filesystems like Render
+                $base64 = 'data:' . $file->getMimeType() . ';base64,' . base64_encode(file_get_contents($file));
                 
                 $media = Multimedia::create([
                     'team_id' => $request->team_id ?: null,
-                    'file_path' => '/storage/' . $path,
+                    'file_path' => $base64,
                     'title' => $request->title ?: null,
                     'type' => 'image',
                 ]);

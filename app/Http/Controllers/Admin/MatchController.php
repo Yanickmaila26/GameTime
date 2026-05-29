@@ -17,12 +17,17 @@ class MatchController extends Controller
     public function index()
     {
         return response()->json([
-            'matches' => Game::with(['homeTeam', 'awayTeam', 'championship', 'referee'])
+            'matches' => Game::with([
+                'homeTeam:id,name,short_name,logo_color,logo_url',
+                'awayTeam:id,name,short_name,logo_color,logo_url',
+                'championship:id,name,status',
+                'referee:id,name'
+            ])
                 ->orderBy('scheduled_at')
                 ->get(),
-            'championships' => Championship::with('teams')->where('status', '!=', 'finished')->get(),
-            'teams' => Team::whereRaw('active = true')->orderBy('name')->get(),
-            'referees' => Referee::where('status', 'activo')->orderBy('name')->get(),
+            'championships' => Championship::with('teams:id,name')->where('status', '!=', 'finished')->get(),
+            'teams' => Team::where('active', true)->select('id', 'name', 'short_name', 'logo_color', 'logo_url')->orderBy('name')->get(),
+            'referees' => Referee::where('status', 'activo')->select('id', 'name')->orderBy('name')->get(),
         ]);
     }
 
