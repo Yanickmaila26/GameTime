@@ -15,6 +15,11 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo_mysql pdo_pgsql gd zip mbstring exif pcntl
 
+# Configure PHP upload settings (32MB limits for base64 images and large PNGs)
+RUN echo "upload_max_filesize = 32M" > /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "post_max_size = 32M" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "memory_limit = 256M" >> /usr/local/etc/php/conf.d/uploads.ini
+
 # Enable Apache mod_rewrite for Laravel routing
 RUN a2enmod rewrite
 
