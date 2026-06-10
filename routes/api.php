@@ -116,6 +116,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/partidos/{match}/foul', [MatchController::class, 'foul']);
         Route::post('/partidos/{match}/next-quarter', [MatchController::class, 'nextQuarter']);
         Route::post('/partidos/{match}/finish', [MatchController::class, 'finish']);
+        Route::post('/partidos/{match}/importar-acta', [MatchController::class, 'importResults']);
 
         // Multimedia
         Route::get('/multimedia', [MultimediaController::class, 'index']);
