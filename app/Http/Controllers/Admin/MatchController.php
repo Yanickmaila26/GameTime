@@ -410,6 +410,134 @@ class MatchController extends Controller
         ]);
     }
 
+    public function importResults(Request $request, Game $match)
+    {
+        $data = $request->validate([
+            'home_score' => 'required|integer|min:0',
+            'away_score' => 'required|integer|min:0',
+            'players' => 'array',
+            'players.*.player_id' => 'required|exists:players,id',
+            'players.*.team_id' => 'required|exists:teams,id',
+            'players.*.points' => 'required|integer|min:0',
+            'players.*.fouls' => 'required|integer|min:0',
+        ]);
+
+        \DB::transaction(function () use ($data, $match) {
+            // 1. Revert standings if the match was already finished
+            if ($match->status === 'finished') {
+                $this->revertStandings($match);
+            }
+
+            // 2. Clear old match players and events
+            MatchPlayer::where('match_id', $match->id)->delete();
+            MatchEvent::where('match_id', $match->id)->delete();
+
+            // 3. Create new match players
+            foreach ($data['players'] ?? [] as $playerData) {
+                MatchPlayer::create([
+                    'match_id' => $match->id,
+                    'player_id' => $playerData['player_id'],
+                    'team_id' => $playerData['team_id'],
+                    'points' => $playerData['points'],
+                    'fouls' => $playerData['fouls'],
+                    'is_ejected' => $playerData['fouls'] >= 5,
+                ]);
+            }
+
+            // 4. Update the match scores and status
+            $match->update([
+                'home_score' => $data['home_score'],
+                'away_score' => $data['away_score'],
+                'status' => 'finished',
+                'finished_at' => now(),
+                'current_quarter' => 4,
+            ]);
+
+            // 5. Create a match end event
+            MatchEvent::create([
+                'match_id' => $match->id,
+                'quarter' => 4,
+                'type' => 'match_end',
+                'home_score_snapshot' => $data['home_score'],
+                'away_score_snapshot' => $data['away_score'],
+                'description' => 'Partido finalizado e importado por acta de resultados.',
+            ]);
+
+            // 6. Update standings with the new scores
+            $this->updateStandings($match);
+        });
+
+        return response()->json([
+            'message' => 'Acta de resultados importada correctamente.',
+            'match' => $match->fresh(['homeTeam.players', 'awayTeam.players', 'players.player', 'events'])
+        ]);
+    }
+
+    private function revertStandings(Game $match): void
+    {
+        if ($match->stage !== 'group') {
+            return;
+        }
+
+        $isForfeit = !is_null($match->forfeit_team_id);
+        $homeWon = $match->home_score > $match->away_score;
+        $diff = $match->home_score - $match->away_score;
+
+        $match->championship->standings()
+            ->where('team_id', $match->home_team_id)
+            ->decrement('pj');
+        $match->championship->standings()
+            ->where('team_id', $match->away_team_id)
+            ->decrement('pj');
+
+        if ($isForfeit) {
+            if ($match->forfeit_team_id == $match->home_team_id) {
+                $match->championship->standings()->where('team_id', $match->away_team_id)
+                    ->decrement('pg');
+                $match->championship->standings()->where('team_id', $match->away_team_id)
+                    ->decrement('pts', 2);
+                $match->championship->standings()->where('team_id', $match->home_team_id)
+                    ->decrement('pp');
+                $match->championship->standings()->where('team_id', $match->home_team_id)
+                    ->decrement('pts', 0);
+            } else {
+                $match->championship->standings()->where('team_id', $match->home_team_id)
+                    ->decrement('pg');
+                $match->championship->standings()->where('team_id', $match->home_team_id)
+                    ->decrement('pts', 2);
+                $match->championship->standings()->where('team_id', $match->away_team_id)
+                    ->decrement('pp');
+                $match->championship->standings()->where('team_id', $match->away_team_id)
+                    ->decrement('pts', 0);
+            }
+        } else {
+            if ($homeWon) {
+                $match->championship->standings()->where('team_id', $match->home_team_id)
+                    ->decrement('pg');
+                $match->championship->standings()->where('team_id', $match->home_team_id)
+                    ->decrement('pts', 2);
+                $match->championship->standings()->where('team_id', $match->away_team_id)
+                    ->decrement('pp');
+                $match->championship->standings()->where('team_id', $match->away_team_id)
+                    ->decrement('pts', 1);
+            } else {
+                $match->championship->standings()->where('team_id', $match->away_team_id)
+                    ->decrement('pg');
+                $match->championship->standings()->where('team_id', $match->away_team_id)
+                    ->decrement('pts', 2);
+                $match->championship->standings()->where('team_id', $match->home_team_id)
+                    ->decrement('pp');
+                $match->championship->standings()->where('team_id', $match->home_team_id)
+                    ->decrement('pts', 1);
+            }
+        }
+
+        $match->championship->standings()->where('team_id', $match->home_team_id)
+            ->decrement('dif', $diff);
+        $match->championship->standings()->where('team_id', $match->away_team_id)
+            ->decrement('dif', -$diff);
+    }
+
     private function updateStandings(Game $match): void
     {
         if ($match->stage !== 'group') {
