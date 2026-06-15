@@ -18,6 +18,18 @@ RUN apt-get update && apt-get install -y \
 # Enable Apache mod_rewrite for Laravel routing
 RUN a2enmod rewrite
 
+# Set ServerName globally to suppress FQDN warnings
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+
+# Limit Apache Prefork processes to prevent OOM on Render's 512MB RAM limit
+RUN echo '<IfModule mpm_prefork_module>' > /etc/apache2/mods-available/mpm_prefork.conf && \
+    echo '    StartServers             2' >> /etc/apache2/mods-available/mpm_prefork.conf && \
+    echo '    MinSpareServers          2' >> /etc/apache2/mods-available/mpm_prefork.conf && \
+    echo '    MaxSpareServers          4' >> /etc/apache2/mods-available/mpm_prefork.conf && \
+    echo '    MaxRequestWorkers        6' >> /etc/apache2/mods-available/mpm_prefork.conf && \
+    echo '    MaxConnectionsPerChild   1000' >> /etc/apache2/mods-available/mpm_prefork.conf && \
+    echo '</IfModule>' >> /etc/apache2/mods-available/mpm_prefork.conf
+
 # Change Apache document root to Laravel public directory
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
