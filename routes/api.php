@@ -87,6 +87,9 @@ Route::get('/view-logs', function () {
 
 // ─── Público ────────────────────────────────────────────────────────────────
 Route::get('/home', [PublicController::class, 'home']);
+Route::get('/teams/{team}/media', function (\App\Models\Team $team) {
+    return response()->json($team->media()->latest()->get());
+});
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
 Route::post('/login', [AuthController::class, 'login']);

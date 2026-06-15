@@ -21,7 +21,6 @@ class PublicController extends Controller
                     'teams:id,name,short_name,logo_color,logo_url',
                     'teams.players:id,team_id,name,number,position,status',
                     'teams.players.matchStats:id,player_id,points',
-                    'teams.media:id,team_id,file_path,title,type',
                     'matches' => function ($q) {
                         $q->orderBy('scheduled_at');
                     },
@@ -137,7 +136,7 @@ class PublicController extends Controller
                 })
                 ->values();
 
-            $generalMedia = \App\Models\Multimedia::whereNull('team_id')->latest()->get();
+            $generalMedia = \App\Models\Multimedia::whereNull('team_id')->latest()->take(6)->get();
 
             return [
                 'championship' => $activeChampionship,
