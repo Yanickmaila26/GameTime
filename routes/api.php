@@ -11,6 +11,21 @@ use App\Http\Controllers\Admin\ChampionshipController;
 use App\Http\Controllers\Admin\MatchController;
 use App\Http\Controllers\Admin\MultimediaController;
 
+// ─── Debug routes ────────────────────────────────────────────────────────────
+Route::get('/debug-routes', function () {
+    return response()->json([
+        'has_importar_acta' => collect(Route::getRoutes())->contains(function ($route) {
+            return str_contains($route->uri(), 'importar-acta');
+        }),
+        'routes' => collect(Route::getRoutes())->map(function ($route) {
+            return [
+                'uri' => $route->uri(),
+                'methods' => $route->methods(),
+            ];
+        })
+    ]);
+});
+
 // ─── Migraciones y Seeds desde el Navegador ──────────────────────────────────
 Route::get('/run-migrations', function () {
     try {
