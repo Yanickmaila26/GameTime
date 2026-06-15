@@ -11,6 +11,21 @@ use App\Http\Controllers\Admin\ChampionshipController;
 use App\Http\Controllers\Admin\MatchController;
 use App\Http\Controllers\Admin\MultimediaController;
 
+// ─── Debug routes ────────────────────────────────────────────────────────────
+Route::get('/debug-routes', function () {
+    return response()->json([
+        'has_importar_acta' => collect(Route::getRoutes())->contains(function ($route) {
+            return str_contains($route->uri(), 'importar-acta');
+        }),
+        'routes' => collect(Route::getRoutes())->map(function ($route) {
+            return [
+                'uri' => $route->uri(),
+                'methods' => $route->methods(),
+            ];
+        })
+    ]);
+});
+
 // ─── Migraciones y Seeds desde el Navegador ──────────────────────────────────
 Route::get('/run-migrations', function () {
     try {
@@ -116,6 +131,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/partidos/{match}/foul', [MatchController::class, 'foul']);
         Route::post('/partidos/{match}/next-quarter', [MatchController::class, 'nextQuarter']);
         Route::post('/partidos/{match}/finish', [MatchController::class, 'finish']);
+        Route::post('/partidos/{match}/importar-acta', [MatchController::class, 'importResults']);
 
         // Multimedia
         Route::get('/multimedia', [MultimediaController::class, 'index']);
