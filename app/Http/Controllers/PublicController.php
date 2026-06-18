@@ -78,6 +78,7 @@ class PublicController extends Controller
                         'name'     => $mp->player->name,
                         'team'     => $mp->player->team?->name ?? 'Equipo',
                         'ppg'      => round($mp->ppg, 1),
+                        'total'    => $mp->total_points,
                         'matches'  => $mp->games_played,
                         'avatar'   => collect(explode(' ', $mp->player->name))->map(fn($n) => mb_substr($n, 0, 1))->join(''),
                         'position' => $mp->player->position ?? 'Jugador',

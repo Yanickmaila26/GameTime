@@ -84,7 +84,14 @@ class MatchController extends Controller
 
     public function destroy(Game $match)
     {
+        if ($match->status === 'finished') {
+            $this->revertStandings($match);
+        }
         $match->delete();
+
+        // Clear public home cache
+        \Illuminate\Support\Facades\Cache::forget('public_home_data');
+
         return response()->json([
             'message' => 'Partido eliminado.'
         ]);
