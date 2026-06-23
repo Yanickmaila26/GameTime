@@ -87,6 +87,8 @@ Route::get('/view-logs', function () {
 
 // ─── Público ────────────────────────────────────────────────────────────────
 Route::get('/home', [PublicController::class, 'home']);
+Route::get('/teams/{id}/logo', [PublicController::class, 'teamLogo']);  // Serves team logo (Base64) on demand
+Route::get('/media/{id}', [PublicController::class, 'mediaFile']);       // Serves individual media file on demand
 Route::get('/teams/{team}/media', function (\App\Models\Team $team) {
     return response()->json($team->media()->latest()->get());
 });

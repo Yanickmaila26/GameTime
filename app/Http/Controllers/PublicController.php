@@ -12,20 +12,22 @@ class PublicController extends Controller
 {
     public function home()
     {
-        $data = Cache::remember('public_home_data', 86400, function () {
+        // Cache only lightweight data (no Base64 images). TTL: 5 minutes.
+        $data = Cache::remember('public_home_data', 300, function () {
             $activeChampionship = Championship::where('status', 'active')
                 ->with([
                     'teams' => function ($q) {
-                        $q->orderByPivot('pts', 'desc');
+                        // Exclude logo_url (Base64) to keep response small
+                        $q->orderByPivot('pts', 'desc')
+                          ->select('teams.id', 'teams.name', 'teams.short_name', 'teams.logo_color');
                     },
-                    'teams:id,name,short_name,logo_color,logo_url',
                     'teams.players:id,team_id,name,number,position,status',
                     'teams.players.matchStats:id,player_id,points',
                     'matches' => function ($q) {
                         $q->orderBy('scheduled_at');
                     },
-                    'matches.homeTeam:id,name,short_name,logo_color,logo_url',
-                    'matches.awayTeam:id,name,short_name,logo_color,logo_url',
+                    'matches.homeTeam:id,name,short_name,logo_color',
+                    'matches.awayTeam:id,name,short_name,logo_color',
                     'matches.referee:id,name',
                     'matches.players:id,match_id,player_id,points,fouls,is_ejected',
                     'matches.events:id,match_id,quarter,type,team_id,player_id,home_score_snapshot,away_score_snapshot,description',
@@ -35,9 +37,9 @@ class PublicController extends Controller
 
             $liveMatches = Game::where('status', 'live')
                 ->with([
-                    'homeTeam:id,name,short_name,logo_color,logo_url',
+                    'homeTeam:id,name,short_name,logo_color',
                     'homeTeam.players:id,team_id,name,number,position,status',
-                    'awayTeam:id,name,short_name,logo_color,logo_url',
+                    'awayTeam:id,name,short_name,logo_color',
                     'awayTeam.players:id,team_id,name,number,position,status',
                     'championship:id,name,status',
                     'players:id,match_id,player_id,points,fouls,is_ejected',
@@ -48,9 +50,9 @@ class PublicController extends Controller
 
             $recentMatches = Game::where('status', 'finished')
                 ->with([
-                    'homeTeam:id,name,short_name,logo_color,logo_url',
+                    'homeTeam:id,name,short_name,logo_color',
                     'homeTeam.players:id,team_id,name,number,position,status',
-                    'awayTeam:id,name,short_name,logo_color,logo_url',
+                    'awayTeam:id,name,short_name,logo_color',
                     'awayTeam.players:id,team_id,name,number,position,status',
                     'players:id,match_id,player_id,points,fouls,is_ejected',
                     'events:id,match_id,quarter,type,team_id,player_id,home_score_snapshot,away_score_snapshot,description',
@@ -60,8 +62,9 @@ class PublicController extends Controller
                 ->take(5)
                 ->get();
 
+            // Exclude logo_url (Base64) — logos should be fetched via /api/teams/{id}/logo
             $teams = Team::where('active', true)
-                ->select('id', 'name', 'short_name', 'logo_color', 'logo_url')
+                ->select('id', 'name', 'short_name', 'logo_color')
                 ->get();
 
             // 1. Scorers (Sum of points in match_players)
@@ -116,7 +119,37 @@ class PublicController extends Controller
             })
             ->values();
 
-            // 3. Fouls (Sum of fouls in match_players)
+            // 3. Baskets (Count of score2 in match_events = field goals / aros)
+            $baskets = \App\Models\MatchEvent::where('type', 'score2')
+                ->selectRaw('player_id, COUNT(id) as total_baskets')
+                ->groupBy('player_id')
+                ->orderByDesc('total_baskets')
+                ->with(['player.team'])
+                ->take(3)
+                ->get()
+                ->filter(fn($me) => !is_null($me->player));
+
+            $basketPlayerIds = $baskets->pluck('player_id')->toArray();
+            $gamesPlayedBaskets = \App\Models\MatchPlayer::whereIn('player_id', $basketPlayerIds)
+                ->selectRaw('player_id, COUNT(match_id) as count')
+                ->groupBy('player_id')
+                ->pluck('count', 'player_id');
+
+            $baskets = $baskets->map(function ($me) use ($gamesPlayedBaskets) {
+                $gamesPlayed = $gamesPlayedBaskets[$me->player_id] ?? 1;
+                return [
+                    'id'       => $me->player_id,
+                    'name'     => $me->player->name,
+                    'team'     => $me->player->team?->name ?? 'Equipo',
+                    'bpg'      => round($me->total_baskets / $gamesPlayed, 1),
+                    'total'    => $me->total_baskets,
+                    'avatar'   => collect(explode(' ', $me->player->name))->map(fn($n) => mb_substr($n, 0, 1))->join(''),
+                    'position' => $me->player->position ?? 'Jugador',
+                ];
+            })
+            ->values();
+
+            // 4. Fouls (Sum of fouls in match_players)
             $fouls = \App\Models\MatchPlayer::selectRaw('player_id, SUM(fouls) as total_fouls, COUNT(match_id) as games_played, AVG(fouls) as fpg')
                 ->groupBy('player_id')
                 ->orderByDesc('total_fouls')
@@ -129,7 +162,7 @@ class PublicController extends Controller
                         'id'       => $mp->player_id,
                         'name'     => $mp->player->name,
                         'team'     => $mp->player->team?->name ?? 'Equipo',
-                        'rpg'      => round($mp->fpg, 1),
+                        'fpg'      => round($mp->fpg, 1),
                         'total'    => $mp->total_fouls,
                         'avatar'   => collect(explode(' ', $mp->player->name))->map(fn($n) => mb_substr($n, 0, 1))->join(''),
                         'position' => $mp->player->position ?? 'Jugador',
@@ -137,22 +170,58 @@ class PublicController extends Controller
                 })
                 ->values();
 
-            $generalMedia = \App\Models\Multimedia::whereNull('team_id')->latest()->take(6)->get();
-
             return [
                 'championship' => $activeChampionship,
                 'liveMatches' => $liveMatches,
                 'recentMatches' => $recentMatches,
                 'teams' => $teams,
-                'generalMedia' => $generalMedia,
                 'leaders' => [
                     'scorers' => $scorers,
                     'threepointers' => $threepointers,
+                    'baskets' => $baskets,
                     'foulers' => $fouls,
                 ]
             ];
         });
 
+        // Fetch media OUTSIDE the cache to avoid storing Base64 blobs in DB cache.
+        // Returns only id, title, team_id, type — NOT file_path (too large).
+        $generalMedia = \App\Models\Multimedia::whereNull('team_id')
+            ->latest()
+            ->take(6)
+            ->get(['id', 'title', 'team_id', 'type', 'created_at']);
+
+        $data = array_merge((array) $data, ['generalMedia' => $generalMedia]);
+
         return response()->json($data);
+    }
+
+    /**
+     * Serve a single team's logo (Base64).
+     * Called by the frontend as /api/teams/{id}/logo
+     */
+    public function teamLogo(int $id)
+    {
+        $team = \App\Models\Team::select('id', 'logo_url', 'logo_color', 'short_name')
+            ->findOrFail($id);
+
+        return response()->json([
+            'id'        => $team->id,
+            'logo_url'  => $team->logo_url,
+            'logo_color'=> $team->logo_color,
+            'short_name'=> $team->short_name,
+        ]);
+    }
+
+    /**
+     * Serve a single multimedia file by ID.
+     * Called by the frontend as /api/media/{id}
+     */
+    public function mediaFile(int $id)
+    {
+        $media = \App\Models\Multimedia::select('id', 'file_path', 'title', 'type', 'team_id')
+            ->findOrFail($id);
+
+        return response()->json($media);
     }
 }
