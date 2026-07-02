@@ -136,7 +136,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/partidos/{match}/estadisticas/{playerId}', [MatchController::class, 'deletePlayerStats']);
         Route::delete('/partidos/{match}/estadisticas', [MatchController::class, 'deletePlayerStats']);
         Route::get('/estadisticas-generales', [MatchController::class, 'getGeneralStats']);
+        Route::get('/estadisticas/generales', [MatchController::class, 'getGeneralStats']);
+        Route::get('/estadisticas', [MatchController::class, 'getGeneralStats']);
         Route::post('/estadisticas-generales', [MatchController::class, 'saveGeneralStats']);
+        Route::post('/estadisticas/generales', [MatchController::class, 'saveGeneralStats']);
+        Route::post('/estadisticas', [MatchController::class, 'saveGeneralStats']);
 
         // Partido en vivo
         Route::get('/partidos/{match}/live', [MatchController::class, 'live']);

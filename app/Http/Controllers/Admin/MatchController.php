@@ -106,10 +106,21 @@ class MatchController extends Controller
         ]);
     }
 
-    public function getStats(Game $match)
+    public function getStats($matchId)
     {
-        $match->load(['homeTeam.players', 'awayTeam.players']);
-        
+        $match = Game::with(['homeTeam.players', 'awayTeam.players'])->find($matchId);
+        if (!$match) {
+            return response()->json([
+                'match' => null,
+                'stats' => [],
+                'home' => [],
+                'away' => [],
+                'players' => [],
+                'home_players' => [],
+                'away_players' => [],
+            ]);
+        }
+
         $matchPlayers = MatchPlayer::where('match_id', $match->id)
             ->with('player')
             ->get();
@@ -156,8 +167,13 @@ class MatchController extends Controller
         ]);
     }
 
-    public function savePlayerStats(Request $request, Game $match)
+    public function savePlayerStats(Request $request, $matchId)
     {
+        $match = Game::find($matchId);
+        if (!$match) {
+            return response()->json(['message' => 'Partido no encontrado.'], 404);
+        }
+
         $data = $request->validate([
             'player_id' => 'required|exists:players,id',
             'team_id' => 'nullable|exists:teams,id',
@@ -170,7 +186,6 @@ class MatchController extends Controller
         if (empty($data['team_id'])) {
             $player = \App\Models\Player::find($data['player_id']);
             $data['team_id'] = $player?->team_id;
-            // If still null, try to match from the match itself
             if (empty($data['team_id'])) {
                 $data['team_id'] = $match->home_team_id;
             }
@@ -186,7 +201,7 @@ class MatchController extends Controller
             ]
         );
         
-        // Sync triples: delete old score3 events for this player and match, then create the new count of score3 events
+        // Sync triples: delete old score3 events for this player and match
         MatchEvent::where('match_id', $match->id)
             ->where('player_id', $data['player_id'])
             ->where('type', 'score3')
@@ -220,20 +235,19 @@ class MatchController extends Controller
         ]);
     }
 
-    public function deletePlayerStats(Request $request, Game $match, $playerId = null)
+    public function deletePlayerStats(Request $request, $matchId, $playerId = null)
     {
-        // Support both URL parameter and request body
         $playerId = $playerId ?? $request->input('player_id');
         
         if (!$playerId) {
             return response()->json(['message' => 'player_id es requerido.'], 422);
         }
 
-        MatchPlayer::where('match_id', $match->id)
+        MatchPlayer::where('match_id', $matchId)
             ->where('player_id', $playerId)
             ->delete();
             
-        MatchEvent::where('match_id', $match->id)
+        MatchEvent::where('match_id', $matchId)
             ->where('player_id', $playerId)
             ->where('type', 'score3')
             ->delete();
