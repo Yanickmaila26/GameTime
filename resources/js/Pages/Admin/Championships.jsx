@@ -463,6 +463,11 @@ export default function Championships({ championships, teams }) {
   const [expandedChamp, setExpandedChamp] = useState(null)
   const [activeTabs, setActiveTabs] = useState({})
 
+  const deleteMatch = async (id) => {
+    const result = await confirmDelete('¿Eliminar partido?', 'Se eliminará este partido y sus datos.')
+    if (result.isConfirmed) router.delete(`/admin/partidos/${id}`)
+  }
+
   const getTab = (champId, hasGroupStage) => activeTabs[champId] ?? (hasGroupStage ? 'standings' : 'playoffs')
   const setTab  = (champId, tab) => setActiveTabs(prev => ({ ...prev, [champId]: tab }))
 
@@ -762,7 +767,7 @@ export default function Championships({ championships, teams }) {
                                             <span className="text-[10px] text-white mt-1 font-bold">{match.away_team?.short_name}</span>
                                           </div>
                                         </div>
-                                        <div className="flex items-center space-x-2 ml-2">
+                                        <div className="flex items-center space-x-1 ml-2">
                                           <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full ${
                                             match.status === 'finished' ? 'bg-blue-500/10 text-blue-400'
                                             : match.status === 'live' ? 'bg-red-500/10 text-red-400'
@@ -773,10 +778,19 @@ export default function Championships({ championships, teams }) {
                                           {champ.status === 'active' && (
                                             <button 
                                               onClick={() => setManualMatchModal({ type: 'edit', championship: champ, match })}
-                                              className="p-1 text-gray-500 hover:text-white rounded hover:bg-[#222] transition-colors"
+                                              className="p-1 text-gray-400 hover:text-white rounded hover:bg-[#222] transition-colors"
                                               title="Editar partido de playoff"
                                             >
                                               <Edit2 className="w-3 h-3" />
+                                            </button>
+                                          )}
+                                          {champ.status === 'active' && (
+                                            <button 
+                                              onClick={() => deleteMatch(match.id)}
+                                              className="p-1 text-gray-500 hover:text-red-400 rounded hover:bg-red-950/30 transition-colors"
+                                              title="Eliminar partido"
+                                            >
+                                              <Trash2 className="w-3 h-3" />
                                             </button>
                                           )}
                                         </div>

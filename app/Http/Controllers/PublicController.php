@@ -59,130 +59,155 @@ class PublicController extends Controller
                     'events.player:id,name'
                 ])
                 ->latest('finished_at')
-                ->take(5)
-                ->get();
+        $activeChampionship = Championship::where('status', 'active')
+            ->with([
+                'teams' => function ($q) {
+                    // Exclude logo_url (Base64) to keep response small
+                    $q->orderByPivot('pts', 'desc')
+                      ->select('teams.id', 'teams.name', 'teams.short_name', 'teams.logo_color');
+                },
+                'teams.players:id,team_id,name,number,position,status',
+                'teams.players.matchStats:id,player_id,points',
+                'matches' => function ($q) {
+                    $q->orderBy('scheduled_at');
+                },
+                'matches.homeTeam:id,name,short_name,logo_color',
+                'matches.awayTeam:id,name,short_name,logo_color',
+            ])
+            ->first();
 
-            // Exclude logo_url (Base64) — logos should be fetched via /api/teams/{id}/logo
-            $teams = Team::where('active', true)
-                ->select('id', 'name', 'short_name', 'logo_color')
-                ->get();
+        $liveMatches = [];
+        $recentMatches = [];
+        $teams = [];
 
-            // 1. Scorers (Sum of points in match_players)
-            $scorers = \App\Models\MatchPlayer::selectRaw('player_id, SUM(points) as total_points, COUNT(match_id) as games_played, AVG(points) as ppg')
-                ->groupBy('player_id')
-                ->orderByDesc('total_points')
-                ->with(['player.team'])
-                ->take(5)
-                ->get()
-                ->filter(fn($mp) => !is_null($mp->player))
-                ->map(function ($mp) {
-                    return [
-                        'id'       => $mp->player_id,
-                        'name'     => $mp->player->name,
-                        'team'     => $mp->player->team?->name ?? 'Equipo',
-                        'ppg'      => round($mp->ppg, 1),
-                        'total'    => $mp->total_points,
-                        'matches'  => $mp->games_played,
-                        'avatar'   => collect(explode(' ', $mp->player->name))->map(fn($n) => mb_substr($n, 0, 1))->join(''),
-                        'position' => $mp->player->position ?? 'Jugador',
-                    ];
-                })
+        if ($activeChampionship) {
+            $liveMatches = $activeChampionship->matches
+                ->filter(fn($m) => $m->status === 'live')
                 ->values();
 
-            // 2. Threepointers (Count of score3 in match_events)
-            $threepointers = \App\Models\MatchEvent::where('type', 'score3')
-                ->selectRaw('player_id, COUNT(id) as total_triples')
-                ->groupBy('player_id')
-                ->orderByDesc('total_triples')
-                ->with(['player.team'])
+            $recentMatches = $activeChampionship->matches
+                ->filter(fn($m) => $m->status === 'finished')
                 ->take(5)
-                ->get()
-                ->filter(fn($me) => !is_null($me->player));
+                ->values();
 
-            $threepointerPlayerIds = $threepointers->pluck('player_id')->toArray();
-            $gamesPlayedCounts = \App\Models\MatchPlayer::whereIn('player_id', $threepointerPlayerIds)
-                ->selectRaw('player_id, COUNT(match_id) as count')
-                ->groupBy('player_id')
-                ->pluck('count', 'player_id');
+            $teams = $activeChampionship->teams;
+        }
 
-            $threepointers = $threepointers->map(function ($me) use ($gamesPlayedCounts) {
-                $gamesPlayed = $gamesPlayedCounts[$me->player_id] ?? 1;
+        // 1. Scorers (Sum of points in match_players)
+        $scorers = \App\Models\MatchPlayer::has('player')
+            ->selectRaw('player_id, SUM(points) as total_points, COUNT(match_id) as games_played, AVG(points) as ppg')
+            ->groupBy('player_id')
+            ->orderByDesc('total_points')
+            ->with(['player.team'])
+            ->take(5)
+            ->get()
+            ->map(function ($mp) {
                 return [
-                    'id'       => $me->player_id,
-                    'name'     => $me->player->name,
-                    'team'     => $me->player->team?->name ?? 'Equipo',
-                    'tpg'      => round($me->total_triples / $gamesPlayed, 1),
-                    'total'    => $me->total_triples,
-                    'avatar'   => collect(explode(' ', $me->player->name))->map(fn($n) => mb_substr($n, 0, 1))->join(''),
-                    'position' => $me->player->position ?? 'Jugador',
+                    'id'       => $mp->player_id,
+                    'name'     => $mp->player->name,
+                    'team'     => $mp->player->team?->name ?? 'Equipo',
+                    'ppg'      => round($mp->ppg, 1),
+                    'total'    => $mp->total_points,
+                    'matches'  => $mp->games_played,
+                    'avatar'   => collect(explode(' ', $mp->player->name))->map(fn($n) => mb_substr($n, 0, 1))->join(''),
+                    'position' => $mp->player->position ?? 'Jugador',
                 ];
             })
             ->values();
 
-            // 3. Baskets (Count of score2 in match_events = field goals / aros)
-            $baskets = \App\Models\MatchEvent::where('type', 'score2')
-                ->selectRaw('player_id, COUNT(id) as total_baskets')
-                ->groupBy('player_id')
-                ->orderByDesc('total_baskets')
-                ->with(['player.team'])
-                ->take(5)
-                ->get()
-                ->filter(fn($me) => !is_null($me->player));
+        // 2. Threepointers (Count of score3 in match_events)
+        $threepointers = \App\Models\MatchEvent::where('type', 'score3')
+            ->has('player')
+            ->selectRaw('player_id, COUNT(id) as total_triples')
+            ->groupBy('player_id')
+            ->orderByDesc('total_triples')
+            ->with(['player.team'])
+            ->take(5)
+            ->get();
 
-            $basketPlayerIds = $baskets->pluck('player_id')->toArray();
-            $gamesPlayedBaskets = \App\Models\MatchPlayer::whereIn('player_id', $basketPlayerIds)
-                ->selectRaw('player_id, COUNT(match_id) as count')
-                ->groupBy('player_id')
-                ->pluck('count', 'player_id');
+        $threepointerPlayerIds = $threepointers->pluck('player_id')->toArray();
+        $gamesPlayedCounts = \App\Models\MatchPlayer::whereIn('player_id', $threepointerPlayerIds)
+            ->selectRaw('player_id, COUNT(match_id) as count')
+            ->groupBy('player_id')
+            ->pluck('count', 'player_id');
 
-            $baskets = $baskets->map(function ($me) use ($gamesPlayedBaskets) {
-                $gamesPlayed = $gamesPlayedBaskets[$me->player_id] ?? 1;
-                return [
-                    'id'       => $me->player_id,
-                    'name'     => $me->player->name,
-                    'team'     => $me->player->team?->name ?? 'Equipo',
-                    'bpg'      => round($me->total_baskets / $gamesPlayed, 1),
-                    'total'    => $me->total_baskets,
-                    'avatar'   => collect(explode(' ', $me->player->name))->map(fn($n) => mb_substr($n, 0, 1))->join(''),
-                    'position' => $me->player->position ?? 'Jugador',
-                ];
-            })
-            ->values();
-
-            // 4. Fouls (Sum of fouls in match_players)
-            $fouls = \App\Models\MatchPlayer::selectRaw('player_id, SUM(fouls) as total_fouls, COUNT(match_id) as games_played, AVG(fouls) as fpg')
-                ->groupBy('player_id')
-                ->orderByDesc('total_fouls')
-                ->with(['player.team'])
-                ->take(5)
-                ->get()
-                ->filter(fn($mp) => !is_null($mp->player))
-                ->map(function ($mp) {
-                    return [
-                        'id'       => $mp->player_id,
-                        'name'     => $mp->player->name,
-                        'team'     => $mp->player->team?->name ?? 'Equipo',
-                        'fpg'      => round($mp->fpg, 1),
-                        'total'    => $mp->total_fouls,
-                        'avatar'   => collect(explode(' ', $mp->player->name))->map(fn($n) => mb_substr($n, 0, 1))->join(''),
-                        'position' => $mp->player->position ?? 'Jugador',
-                    ];
-                })
-                ->values();
-
+        $threepointers = $threepointers->map(function ($me) use ($gamesPlayedCounts) {
+            $gamesPlayed = $gamesPlayedCounts[$me->player_id] ?? 1;
             return [
-                'championship' => $activeChampionship,
-                'liveMatches' => $liveMatches,
-                'recentMatches' => $recentMatches,
-                'teams' => $teams,
-                'leaders' => [
-                    'scorers' => $scorers,
-                    'threepointers' => $threepointers,
-                    'baskets' => $baskets,
-                    'foulers' => $fouls,
-                ]
+                'id'       => $me->player_id,
+                'name'     => $me->player->name,
+                'team'     => $me->player->team?->name ?? 'Equipo',
+                'tpg'      => round($me->total_triples / $gamesPlayed, 1),
+                'total'    => $me->total_triples,
+                'avatar'   => collect(explode(' ', $me->player->name))->map(fn($n) => mb_substr($n, 0, 1))->join(''),
+                'position' => $me->player->position ?? 'Jugador',
             ];
-        });
+        })
+        ->values();
+
+        // 3. Baskets (Count of score2 in match_events = field goals / aros)
+        $baskets = \App\Models\MatchEvent::where('type', 'score2')
+            ->has('player')
+            ->selectRaw('player_id, COUNT(id) as total_baskets')
+            ->groupBy('player_id')
+            ->orderByDesc('total_baskets')
+            ->with(['player.team'])
+            ->take(5)
+            ->get();
+
+        $basketPlayerIds = $baskets->pluck('player_id')->toArray();
+        $gamesPlayedBaskets = \App\Models\MatchPlayer::whereIn('player_id', $basketPlayerIds)
+            ->selectRaw('player_id, COUNT(match_id) as count')
+            ->groupBy('player_id')
+            ->pluck('count', 'player_id');
+
+        $baskets = $baskets->map(function ($me) use ($gamesPlayedBaskets) {
+            $gamesPlayed = $gamesPlayedBaskets[$me->player_id] ?? 1;
+            return [
+                'id'       => $me->player_id,
+                'name'     => $me->player->name,
+                'team'     => $me->player->team?->name ?? 'Equipo',
+                'bpg'      => round($me->total_baskets / $gamesPlayed, 1),
+                'total'    => $me->total_baskets,
+                'avatar'   => collect(explode(' ', $me->player->name))->map(fn($n) => mb_substr($n, 0, 1))->join(''),
+                'position' => $me->player->position ?? 'Jugador',
+            ];
+        })
+        ->values();
+
+        // 4. Fouls (Sum of fouls in match_players)
+        $fouls = \App\Models\MatchPlayer::has('player')
+            ->selectRaw('player_id, SUM(fouls) as total_fouls, COUNT(match_id) as games_played, AVG(fouls) as fpg')
+            ->groupBy('player_id')
+            ->orderByDesc('total_fouls')
+            ->with(['player.team'])
+            ->take(5)
+            ->get()
+            ->map(function ($mp) {
+                return [
+                    'id'       => $mp->player_id,
+                    'name'     => $mp->player->name,
+                    'team'     => $mp->player->team?->name ?? 'Equipo',
+                    'fpg'      => round($mp->fpg, 1),
+                    'total'    => $mp->total_fouls,
+                    'avatar'   => collect(explode(' ', $mp->player->name))->map(fn($n) => mb_substr($n, 0, 1))->join(''),
+                    'position' => $mp->player->position ?? 'Jugador',
+                ];
+            })
+            ->values();
+
+        $data = [
+            'championship' => $activeChampionship,
+            'liveMatches' => $liveMatches,
+            'recentMatches' => $recentMatches,
+            'teams' => $teams,
+            'leaders' => [
+                'scorers' => $scorers,
+                'threepointers' => $threepointers,
+                'baskets' => $baskets,
+                'foulers' => $fouls,
+            ]
+        ];
 
         // Fetch media OUTSIDE the cache to avoid storing Base64 blobs in DB cache.
         // Returns only id, title, team_id, type — NOT file_path (too large).
