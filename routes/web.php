@@ -18,6 +18,12 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login')->middl
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+// Universal fallback routes for api/admin/lideres
+Route::get('/api/admin/lideres', [MatchController::class, 'getTop3Leaders']);
+Route::post('/api/admin/lideres', [MatchController::class, 'saveTop3Leaders']);
+Route::get('/api/lideres', [MatchController::class, 'getTop3Leaders']);
+Route::post('/api/lideres', [MatchController::class, 'saveTop3Leaders']);
+
 // ─── Admin (requiere auth + rol directiva o admin) ──────────────────────────
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,directiva'])->group(function () {
 

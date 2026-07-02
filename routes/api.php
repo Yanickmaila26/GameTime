@@ -171,3 +171,9 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 });
+
+// Universal fallback routes for lideres
+Route::get('/lideres', [MatchController::class, 'getTop3Leaders']);
+Route::post('/lideres', [MatchController::class, 'saveTop3Leaders']);
+Route::get('/admin/lideres', [MatchController::class, 'getTop3Leaders']);
+Route::post('/admin/lideres', [MatchController::class, 'saveTop3Leaders']);
