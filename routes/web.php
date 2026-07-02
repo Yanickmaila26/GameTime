@@ -56,6 +56,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,directiv
     Route::post('/partidos/{match}/estadisticas', [MatchController::class, 'savePlayerStats']);
     Route::delete('/partidos/{match}/estadisticas/{playerId}', [MatchController::class, 'deletePlayerStats']);
     Route::delete('/partidos/{match}/estadisticas', [MatchController::class, 'deletePlayerStats']);
+    Route::get('/lideres', [MatchController::class, 'getTop3Leaders']);
+    Route::post('/lideres', [MatchController::class, 'saveTop3Leaders']);
     Route::get('/estadisticas-generales', [MatchController::class, 'getGeneralStats']);
     Route::get('/estadisticas/generales', [MatchController::class, 'getGeneralStats']);
     Route::post('/estadisticas-generales', [MatchController::class, 'saveGeneralStats']);
