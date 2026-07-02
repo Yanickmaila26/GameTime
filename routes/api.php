@@ -86,6 +86,10 @@ Route::get('/view-logs', function () {
 });
 
 // ─── Público ────────────────────────────────────────────────────────────────
+Route::get('/clear-cache', function () {
+    \Illuminate\Support\Facades\Cache::forget('public_home_data');
+    return response()->json(['message' => 'Cache cleared']);
+});
 Route::get('/home', [PublicController::class, 'home']);
 Route::get('/teams/{id}/logo', [PublicController::class, 'teamLogo']);  // Serves team logo (Base64) on demand
 Route::get('/media/{id}', [PublicController::class, 'mediaFile']);       // Serves individual media file on demand
@@ -130,6 +134,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/partidos/{match}/estadisticas', [MatchController::class, 'getStats']);
         Route::post('/partidos/{match}/estadisticas', [MatchController::class, 'savePlayerStats']);
         Route::delete('/partidos/{match}/estadisticas/{playerId}', [MatchController::class, 'deletePlayerStats']);
+        Route::delete('/partidos/{match}/estadisticas', [MatchController::class, 'deletePlayerStats']);
 
         // Partido en vivo
         Route::get('/partidos/{match}/live', [MatchController::class, 'live']);
