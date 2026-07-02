@@ -43,6 +43,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,directiv
 
     // Partidos
     Route::get('/partidos', [MatchController::class, 'index'])->name('matches');
+    Route::get('/estadisticas', function () {
+        $matches = \App\Models\Game::with(['homeTeam', 'awayTeam'])->latest()->get();
+        return inertia('Admin/Stats', [
+            'matches' => $matches
+        ]);
+    })->name('stats');
     Route::post('/partidos', [MatchController::class, 'store']);
     Route::put('/partidos/{match}', [MatchController::class, 'update']);
     Route::delete('/partidos/{match}', [MatchController::class, 'destroy']);

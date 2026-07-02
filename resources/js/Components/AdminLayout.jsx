@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, router, usePage } from '@inertiajs/react'
-import { LayoutDashboard, Users, UserCheck, Trophy, Swords, LogOut, Menu, X, ArrowLeft, User, Image } from 'lucide-react'
+import { LayoutDashboard, Users, UserCheck, Trophy, Swords, LogOut, Menu, X, ArrowLeft, User, Image, BarChart3 } from 'lucide-react'
 import { toastSuccess, toastError } from '../lib/swal'
 
 const allMenuItems = [
@@ -9,6 +9,7 @@ const allMenuItems = [
   { name: 'Árbitros', href: '/admin/arbitros', icon: UserCheck, roles: ['admin'] },
   { name: 'Campeonatos', href: '/admin/campeonatos', icon: Trophy, roles: ['admin'] },
   { name: 'Partidos', href: '/admin/partidos', icon: Swords, roles: ['admin', 'directiva'] },
+  { name: 'Estadísticas', href: '/admin/estadisticas', icon: BarChart3, roles: ['admin', 'directiva'] },
   { name: 'Multimedia', href: '/admin/multimedia', icon: Image, roles: ['admin', 'directiva'] },
 ]
 
