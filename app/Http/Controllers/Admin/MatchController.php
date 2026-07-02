@@ -260,6 +260,130 @@ class MatchController extends Controller
         ]);
     }
 
+    public function getTop3Leaders()
+    {
+        $allPlayers = \App\Models\Player::with('team')->orderBy('name')->get();
+
+        // 1. Scorers
+        $scorers = MatchPlayer::has('player')
+            ->selectRaw('player_id, SUM(points) as total')
+            ->groupBy('player_id')
+            ->orderByDesc('total')
+            ->take(3)
+            ->get();
+
+        // 2. Triples
+        $triples = MatchEvent::where('type', 'score3')
+            ->has('player')
+            ->selectRaw('player_id, COUNT(id) as total')
+            ->groupBy('player_id')
+            ->orderByDesc('total')
+            ->take(3)
+            ->get();
+
+        // 3. Baskets (Aros)
+        $baskets = MatchEvent::where('type', 'score2')
+            ->has('player')
+            ->selectRaw('player_id, COUNT(id) as total')
+            ->groupBy('player_id')
+            ->orderByDesc('total')
+            ->take(3)
+            ->get();
+
+        // 4. Fouls
+        $fouls = MatchPlayer::has('player')
+            ->selectRaw('player_id, SUM(fouls) as total')
+            ->groupBy('player_id')
+            ->orderByDesc('total')
+            ->take(3)
+            ->get();
+
+        return response()->json([
+            'all_players' => $allPlayers->map(fn($p) => [
+                'id' => $p->id,
+                'name' => $p->name,
+                'number' => $p->number,
+                'team_name' => $p->team?->name ?? 'Sin equipo'
+            ]),
+            'scorers' => $scorers,
+            'threepointers' => $triples,
+            'baskets' => $baskets,
+            'fouls' => $fouls,
+        ]);
+    }
+
+    public function saveTop3Leaders(Request $request)
+    {
+        $data = $request->validate([
+            'category' => 'required|string|in:scorers,threepointers,baskets,fouls',
+            'items' => 'required|array|min:1|max:3',
+            'items.*.player_id' => 'required|exists:players,id',
+            'items.*.total' => 'required|integer|min:0',
+        ]);
+
+        $category = $data['category'];
+        $items = $data['items'];
+
+        foreach ($items as $item) {
+            $player = \App\Models\Player::find($item['player_id']);
+            if (!$player) continue;
+
+            $mp = MatchPlayer::where('player_id', $player->id)->first();
+            if (!$mp) {
+                $game = Game::where('home_team_id', $player->team_id)
+                    ->orWhere('away_team_id', $player->team_id)
+                    ->latest()
+                    ->first() ?? Game::latest()->first();
+                $gameId = $game?->id ?? 1;
+
+                $mp = MatchPlayer::create([
+                    'match_id' => $gameId,
+                    'player_id' => $player->id,
+                    'team_id' => $player->team_id,
+                    'points' => 0,
+                    'fouls' => 0,
+                    'is_ejected' => false,
+                ]);
+            }
+
+            if ($category === 'scorers') {
+                $mp->update(['points' => $item['total']]);
+            } elseif ($category === 'fouls') {
+                $mp->update(['fouls' => $item['total']]);
+            } elseif ($category === 'threepointers') {
+                MatchEvent::where('player_id', $player->id)->where('type', 'score3')->delete();
+                for ($i = 0; $i < $item['total']; $i++) {
+                    MatchEvent::create([
+                        'match_id' => $mp->match_id,
+                        'quarter' => 4,
+                        'type' => 'score3',
+                        'team_id' => $player->team_id,
+                        'player_id' => $player->id,
+                        'description' => 'Triple acumulado',
+                    ]);
+                }
+            } elseif ($category === 'baskets') {
+                MatchEvent::where('player_id', $player->id)->where('type', 'score2')->delete();
+                for ($i = 0; $i < $item['total']; $i++) {
+                    MatchEvent::create([
+                        'match_id' => $mp->match_id,
+                        'quarter' => 4,
+                        'type' => 'score2',
+                        'team_id' => $player->team_id,
+                        'player_id' => $player->id,
+                        'description' => 'Aro de campo acumulado',
+                    ]);
+                }
+            }
+        }
+
+        \Illuminate\Support\Facades\Cache::forget('public_home_data');
+
+        return response()->json([
+            'message' => 'Líderes actualizados correctamente.',
+        ]);
+    }
+
     public function getGeneralStats()
     {
         $players = \App\Models\Player::with('team')->orderBy('name')->get();

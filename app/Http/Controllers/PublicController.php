@@ -99,7 +99,7 @@ class PublicController extends Controller
             ->groupBy('player_id')
             ->orderByDesc('total_points')
             ->with(['player.team'])
-            ->take(5)
+            ->take(3)
             ->get()
             ->map(function ($mp) {
                 return [
@@ -122,7 +122,7 @@ class PublicController extends Controller
             ->groupBy('player_id')
             ->orderByDesc('total_triples')
             ->with(['player.team'])
-            ->take(5)
+            ->take(3)
             ->get();
 
         $threepointerPlayerIds = $threepointers->pluck('player_id')->toArray();
@@ -152,7 +152,7 @@ class PublicController extends Controller
             ->groupBy('player_id')
             ->orderByDesc('total_baskets')
             ->with(['player.team'])
-            ->take(5)
+            ->take(3)
             ->get();
 
         $basketPlayerIds = $baskets->pluck('player_id')->toArray();
@@ -181,7 +181,7 @@ class PublicController extends Controller
             ->groupBy('player_id')
             ->orderByDesc('total_fouls')
             ->with(['player.team'])
-            ->take(5)
+            ->take(3)
             ->get()
             ->map(function ($mp) {
                 return [
