@@ -246,6 +246,128 @@ class MatchController extends Controller
         ]);
     }
 
+    public function getGeneralStats()
+    {
+        $players = \App\Models\Player::with('team')->orderBy('name')->get();
+
+        $playerStats = MatchPlayer::selectRaw('player_id, SUM(points) as total_points, SUM(fouls) as total_fouls')
+            ->groupBy('player_id')
+            ->get()
+            ->keyBy('player_id');
+
+        $triples = MatchEvent::where('type', 'score3')
+            ->selectRaw('player_id, COUNT(id) as total_triples')
+            ->groupBy('player_id')
+            ->pluck('total_triples', 'player_id');
+
+        $baskets = MatchEvent::where('type', 'score2')
+            ->selectRaw('player_id, COUNT(id) as total_baskets')
+            ->groupBy('player_id')
+            ->pluck('total_baskets', 'player_id');
+
+        $data = $players->map(function ($p) use ($playerStats, $triples, $baskets) {
+            $st = $playerStats[$p->id] ?? null;
+            return [
+                'player_id' => $p->id,
+                'name' => $p->name,
+                'number' => $p->number,
+                'position' => $p->position ?? 'Jugador',
+                'team_id' => $p->team_id,
+                'team_name' => $p->team?->name ?? 'Sin equipo',
+                'total_points' => (int)($st->total_points ?? 0),
+                'total_fouls' => (int)($st->total_fouls ?? 0),
+                'total_triples' => (int)($triples[$p->id] ?? 0),
+                'total_baskets' => (int)($baskets[$p->id] ?? 0),
+            ];
+        });
+
+        return response()->json([
+            'players' => $data,
+            'teams' => \App\Models\Team::where('active', true)->select('id', 'name')->orderBy('name')->get(),
+        ]);
+    }
+
+    public function saveGeneralStats(Request $request)
+    {
+        $data = $request->validate([
+            'player_id' => 'required|exists:players,id',
+            'total_points' => 'required|integer|min:0',
+            'total_triples' => 'required|integer|min:0',
+            'total_baskets' => 'required|integer|min:0',
+            'total_fouls' => 'required|integer|min:0',
+        ]);
+
+        $player = \App\Models\Player::findOrFail($data['player_id']);
+
+        $mp = MatchPlayer::where('player_id', $player->id)->first();
+
+        if (!$mp) {
+            $game = Game::where('home_team_id', $player->team_id)
+                ->orWhere('away_team_id', $player->team_id)
+                ->latest()
+                ->first() ?? Game::latest()->first();
+
+            $gameId = $game?->id ?? 1;
+
+            $mp = MatchPlayer::create([
+                'match_id' => $gameId,
+                'player_id' => $player->id,
+                'team_id' => $player->team_id,
+                'points' => $data['total_points'],
+                'fouls' => $data['total_fouls'],
+                'is_ejected' => $data['total_fouls'] >= 5,
+            ]);
+        } else {
+            MatchPlayer::where('player_id', $player->id)
+                ->where('id', '!=', $mp->id)
+                ->update(['points' => 0, 'fouls' => 0]);
+
+            $mp->update([
+                'points' => $data['total_points'],
+                'fouls' => $data['total_fouls'],
+                'is_ejected' => $data['total_fouls'] >= 5,
+            ]);
+        }
+
+        // Sync triples (score3)
+        MatchEvent::where('player_id', $player->id)
+            ->where('type', 'score3')
+            ->delete();
+
+        for ($i = 0; $i < $data['total_triples']; $i++) {
+            MatchEvent::create([
+                'match_id' => $mp->match_id,
+                'quarter' => 4,
+                'type' => 'score3',
+                'team_id' => $player->team_id,
+                'player_id' => $player->id,
+                'description' => 'Triple acumulado',
+            ]);
+        }
+
+        // Sync field goals (score2)
+        MatchEvent::where('player_id', $player->id)
+            ->where('type', 'score2')
+            ->delete();
+
+        for ($i = 0; $i < $data['total_baskets']; $i++) {
+            MatchEvent::create([
+                'match_id' => $mp->match_id,
+                'quarter' => 4,
+                'type' => 'score2',
+                'team_id' => $player->team_id,
+                'player_id' => $player->id,
+                'description' => 'Aro de campo acumulado',
+            ]);
+        }
+
+        \Illuminate\Support\Facades\Cache::forget('public_home_data');
+
+        return response()->json([
+            'message' => 'Estadísticas acumuladas actualizadas correctamente.',
+        ]);
+    }
+
     public function destroy(Game $match)
     {
         if ($match->status === 'finished') {
