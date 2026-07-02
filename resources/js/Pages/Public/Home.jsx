@@ -11,7 +11,7 @@ import MyTeamTab from '../../Components/MyTeamTab'
 import Sponsors from '../../Components/Sponsors'
 import { 
   Sparkles, Calendar, MapPin, Lock, ArrowRight, Trophy, 
-  Instagram, Facebook, Youtube, Bell, User
+  Instagram, Facebook, Youtube, Bell, User, Swords
 } from 'lucide-react'
 
 // Dynamic leaders mock data mapping
@@ -58,6 +58,7 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
 
   const [activeTab, setActiveTab] = useState('inicio')
   const [statsTab, setStatsTab] = useState('clasificacion')
+  const [torneoTab, setTorneoTab] = useState('grupos')
   const [stopScroll, setStopScroll] = useState(false)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [sheetMatch, setSheetMatch] = useState(null)
@@ -146,18 +147,22 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
     }
   }, [])
 
-  // Filter dynamic matches by selected round
+  // Filter dynamic matches by selected round and stage
   const allMatches = useMemo(() => championship?.matches || [], [championship])
+  const groupMatches = useMemo(() => allMatches.filter(m => m.stage === 'group' || !m.stage), [allMatches])
+  const playoffMatches = useMemo(() => allMatches.filter(m => m.stage === 'playoff'), [allMatches])
+  const hasPlayoffs = useMemo(() => playoffMatches.length > 0, [playoffMatches])
+
   const rounds = useMemo(() => {
-    const roundList = allMatches.map(m => m.round)
+    const roundList = groupMatches.map(m => m.round)
     return [...new Set(roundList)].sort((a, b) => a - b)
-  }, [allMatches])
+  }, [groupMatches])
   const currentOrLastRound = useMemo(() => {
     if (rounds.length === 0) return 1;
     // Find the latest round with live or scheduled matches, or just the last round
-    const pendingRound = allMatches.find(m => m.status === 'live' || m.status === 'scheduled')?.round;
+    const pendingRound = groupMatches.find(m => m.status === 'live' || m.status === 'scheduled')?.round;
     return pendingRound || rounds[rounds.length - 1];
-  }, [rounds, allMatches])
+  }, [rounds, groupMatches])
 
   const [selectedRound, setSelectedRound] = useState(currentOrLastRound)
 
@@ -165,9 +170,29 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
     setSelectedRound(currentOrLastRound)
   }, [currentOrLastRound])
 
+  // Automatically switch to the playoffs tab if group stage is done and playoffs are starting/live
+  useEffect(() => {
+    if (hasPlayoffs) {
+      const hasActiveGroup = groupMatches.some(m => m.status === 'live' || m.status === 'scheduled')
+      const hasActivePlayoff = playoffMatches.some(m => m.status === 'live' || m.status === 'scheduled')
+      if (!hasActiveGroup && hasActivePlayoff) {
+        setTorneoTab('playoffs')
+      }
+    }
+  }, [hasPlayoffs, groupMatches, playoffMatches])
+
   const filteredMatches = useMemo(() => {
-    return allMatches.filter(m => m.round === selectedRound)
-  }, [allMatches, selectedRound])
+    return groupMatches.filter(m => m.round === selectedRound)
+  }, [groupMatches, selectedRound])
+
+  const playoffRounds = useMemo(() => {
+    return playoffMatches.reduce((acc, match) => {
+      const label = match.label || `Ronda ${match.round}`
+      if (!acc[label]) acc[label] = []
+      acc[label].push(match)
+      return acc
+    }, {})
+  }, [playoffMatches])
 
   const liveCount = liveMatches.length
   const featuredLiveMatch = liveMatches[0] || null
@@ -411,7 +436,7 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
             ref={marcadoresRef}
             className="min-h-screen w-full flex flex-col justify-center py-16 px-6 relative"
           >
-            <div className="max-w-3xl w-full mx-auto space-y-6 z-10">
+            <div className={`${torneoTab === 'playoffs' ? 'max-w-6xl' : 'max-w-3xl'} w-full mx-auto space-y-6 z-10 transition-all duration-500`}>
               <div className="text-center">
                 <span className="text-[10px] uppercase font-bold text-[#FFB74D] tracking-widest">
                   Live Game Center
@@ -438,106 +463,129 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
                 </div>
               )}
 
-              {/* Rounds Filter list */}
-              <div className="space-y-4 pt-4">
-                <div className="flex items-center justify-between border-b border-gray-900 pb-2">
-                  <span className="text-[10px] uppercase font-bold text-gray-500 tracking-widest px-1">
-                    Selecciona la Jornada
-                  </span>
-                  
-                  <div className="flex space-x-1.5 overflow-x-auto scrollbar-hide">
-                    {rounds.map((round) => (
-                      <button
-                        key={round}
-                        onClick={() => setSelectedRound(round)}
-                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${
-                          selectedRound === round
-                            ? 'bg-basketball text-black border-basketball shadow-[0_0_8px_rgba(245,124,0,0.3)]'
-                            : 'bg-gray-950/60 text-gray-400 border-gray-900 hover:border-gray-800'
-                        }`}
-                      >
-                        Jornada {round} {round === currentOrLastRound && ' (Actual)'}
-                      </button>
-                    ))}
+              {/* Sub-tab selectors for Torneo: Partidos de Grupo vs Llave Playoffs */}
+              {hasPlayoffs && (
+                <div className="flex justify-center space-x-4 max-w-sm mx-auto pt-4">
+                  <div className={`${torneoTab === 'grupos' ? 'glow-btn-orange' : 'glow-btn-gray'} rounded-full p-0.5 hover:scale-105 transition duration-300 active:scale-100 flex-1`}>
+                    <button
+                      onClick={() => setTorneoTab('grupos')}
+                      className="w-full text-center py-2.5 bg-gray-800 text-white rounded-full text-[10px] font-extrabold transition-all uppercase tracking-wider"
+                    >
+                      Partidos de Grupo
+                    </button>
+                  </div>
+                  <div className={`${torneoTab === 'playoffs' ? 'glow-btn-orange' : 'glow-btn-gray'} rounded-full p-0.5 hover:scale-105 transition duration-300 active:scale-100 flex-1`}>
+                    <button
+                      onClick={() => setTorneoTab('playoffs')}
+                      className="w-full text-center py-2.5 bg-gray-800 text-white rounded-full text-[10px] font-extrabold transition-all uppercase tracking-wider"
+                    >
+                      Llave Playoffs
+                    </button>
                   </div>
                 </div>
+              )}
 
-                {/* Match Lists Grid */}
-                <div className="grid grid-cols-1 gap-3">
-                  {filteredMatches.length === 0 ? (
-                    <div className="text-center py-10 bg-gray-950/40 border border-gray-900 rounded-2xl text-xs text-gray-500 font-bold">
-                      No hay partidos programados en esta jornada.
-                    </div>
-                  ) : (
-                    filteredMatches.map((m) => {
-                      const isLive = m.status === 'live'
-                      return (
-                        <div
-                          key={m.id}
-                          onClick={() => {
-                            if (isLive || m.status === 'finished') {
-                              handleOpenSheet(m)
-                            }
-                          }}
-                          className={`bg-gray-950/50 border rounded-2xl p-4 flex flex-col justify-between transition-all duration-300 backdrop-blur-md ${
-                            isLive
-                              ? 'border-basketball/30 hover:border-orange-500 cursor-pointer shadow-[0_0_12px_rgba(245,124,0,0.05)]'
-                              : m.status === 'finished'
-                              ? 'border-gray-900 hover:border-gray-700 cursor-pointer'
-                              : 'border-gray-900'
+              {torneoTab === 'grupos' ? (
+                /* Rounds Filter list */
+                <div className="space-y-4 pt-4">
+                  <div className="flex items-center justify-between border-b border-gray-900 pb-2">
+                    <span className="text-[10px] uppercase font-bold text-gray-500 tracking-widest px-1">
+                      Selecciona la Jornada
+                    </span>
+                    
+                    <div className="flex space-x-1.5 overflow-x-auto scrollbar-hide">
+                      {rounds.map((round) => (
+                        <button
+                          key={round}
+                          onClick={() => setSelectedRound(round)}
+                          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${
+                            selectedRound === round
+                              ? 'bg-basketball text-black border-basketball shadow-[0_0_8px_rgba(245,124,0,0.3)]'
+                              : 'bg-gray-950/60 text-gray-400 border-gray-900 hover:border-gray-800'
                           }`}
                         >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center space-x-1.5">
-                              {isLive ? (
-                                <>
-                                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
-                                  <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">
-                                    EN VIVO - Q{m.current_quarter}
-                                  </span>
-                                </>
-                              ) : m.status === 'finished' ? (
-                                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
-                                  FINALIZADO
-                                </span>
-                              ) : (
-                                <span className="text-[9px] font-bold text-[#1976D2] uppercase tracking-widest bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/25">
-                                  PROGRAMADO
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[9px] text-gray-500 font-mono">
-                              {m.scheduled_at ? new Date(m.scheduled_at).toLocaleDateString('es-EC', { day: '2-digit', month: 'short' }) : 'Por definir'}
-                            </span>
-                          </div>
+                          Jornada {round} {round === currentOrLastRound && ' (Actual)'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-                          <div className="grid grid-cols-5 items-center py-1">
-                            <div className="col-span-2 flex items-center space-x-2">
-                              <TeamLogo team={m.home_team} className="w-7 h-7" showText={true} />
-                              <span className="text-xs font-black text-white truncate">{m.home_team?.name}</span>
+                  {/* Match Lists Grid */}
+                  <div className="grid grid-cols-1 gap-3">
+                    {filteredMatches.length === 0 ? (
+                      <div className="text-center py-10 bg-gray-950/40 border border-gray-900 rounded-2xl text-xs text-gray-500 font-bold">
+                        No hay partidos programados en esta jornada.
+                      </div>
+                    ) : (
+                      filteredMatches.map((m) => {
+                        const isLive = m.status === 'live'
+                        return (
+                          <div
+                            key={m.id}
+                            onClick={() => {
+                              if (isLive || m.status === 'finished') {
+                                handleOpenSheet(m)
+                              }
+                            }}
+                            className={`bg-gray-950/50 border rounded-2xl p-4 flex flex-col justify-between transition-all duration-300 backdrop-blur-md ${
+                              isLive
+                                ? 'border-basketball/30 hover:border-orange-500 cursor-pointer shadow-[0_0_12px_rgba(245,124,0,0.05)]'
+                                : m.status === 'finished'
+                                ? 'border-gray-900 hover:border-gray-700 cursor-pointer'
+                                : 'border-gray-900'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center space-x-1.5">
+                                {isLive ? (
+                                  <>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+                                    <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">
+                                      EN VIVO - Q{m.current_quarter}
+                                    </span>
+                                  </>
+                                ) : m.status === 'finished' ? (
+                                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
+                                    FINALIZADO
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] font-bold text-[#1976D2] uppercase tracking-widest bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/25">
+                                    PROGRAMADO
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[9px] text-gray-500 font-mono">
+                                {m.scheduled_at ? new Date(m.scheduled_at).toLocaleDateString('es-EC', { day: '2-digit', month: 'short' }) : 'Por definir'}
+                              </span>
                             </div>
 
-                            <div className="col-span-1 flex items-center justify-center text-center">
-                              {m.status === 'scheduled' ? (
-                                <span className="text-[10px] font-extrabold text-gray-500 uppercase">VS</span>
-                              ) : (
-                                <div className="flex items-center space-x-1">
-                                  <span className={`text-sm font-black ${m.home_score >= m.away_score ? 'text-white' : 'text-gray-500'}`}>
-                                    {m.home_score}
-                                  </span>
-                                  <span className="text-xs text-gray-600 font-bold">-</span>
-                                  <span className={`text-sm font-black ${m.away_score >= m.home_score ? 'text-white' : 'text-gray-500'}`}>
-                                    {m.away_score}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
+                            <div className="grid grid-cols-5 items-center py-1">
+                              <div className="col-span-2 flex items-center space-x-2">
+                                <TeamLogo team={m.home_team} className="w-7 h-7" showText={true} />
+                                <span className="text-xs font-black text-white truncate">{m.home_team?.name}</span>
+                              </div>
 
-                            <div className="col-span-2 flex items-center justify-end space-x-2">
-                              <span className="text-xs font-black text-white truncate text-right">{m.away_team?.name}</span>
-                              <TeamLogo team={m.away_team} className="w-7 h-7" showText={true} />
+                              <div className="col-span-1 flex items-center justify-center text-center">
+                                {m.status === 'scheduled' ? (
+                                  <span className="text-[10px] font-extrabold text-gray-500 uppercase">VS</span>
+                                ) : (
+                                  <div className="flex items-center space-x-1">
+                                    <span className={`text-sm font-black ${m.home_score >= m.away_score ? 'text-white' : 'text-gray-500'}`}>
+                                      {m.home_score}
+                                    </span>
+                                    <span className="text-xs text-gray-600 font-bold">-</span>
+                                    <span className={`text-sm font-black ${m.away_score >= m.home_score ? 'text-white' : 'text-gray-500'}`}>
+                                      {m.away_score}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="col-span-2 flex items-center justify-end space-x-2">
+                                <span className="text-xs font-black text-white truncate text-right">{m.away_team?.name}</span>
+                                <TeamLogo team={m.away_team} className="w-7 h-7" showText={true} />
+                              </div>
                             </div>
-                          </div>
 
                           <div className="mt-2.5 pt-2 border-t border-gray-900/60 flex items-center justify-between text-[9px] text-gray-500 font-bold">
                             <span className="flex items-center">
@@ -551,6 +599,107 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
                   )}
                 </div>
               </div>
+              ) : (
+                /* Playoffs Bracket section */
+                <div className="space-y-6 pt-4">
+                  {Object.keys(playoffRounds).length === 0 ? (
+                    <div className="text-center py-10 bg-gray-950/40 border border-gray-900 rounded-2xl text-xs text-gray-500 font-bold">
+                      No se han generado llaves eliminatorias aún.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {Object.entries(playoffRounds).map(([label, matches]) => (
+                        <div key={label} className="space-y-3 border border-gray-900 bg-gray-950/20 backdrop-blur-md rounded-2xl p-4">
+                          <div className="border-b border-gray-900 pb-2 mb-4 flex items-center justify-between">
+                            <span className="text-xs font-black text-orange-400 uppercase tracking-wider">{label}</span>
+                            <Swords className="w-3.5 h-3.5 text-gray-600" />
+                          </div>
+                          <div className="space-y-2.5">
+                            {matches.map(match => {
+                              const isLive = match.status === 'live';
+                              return (
+                                <div
+                                  key={match.id}
+                                  onClick={() => {
+                                    if (isLive || match.status === 'finished') {
+                                      handleOpenSheet(match);
+                                    }
+                                  }}
+                                  className={`bg-gray-950/50 border rounded-2xl p-4 flex flex-col justify-between transition-all duration-300 backdrop-blur-md ${
+                                    isLive
+                                      ? 'border-red-500/30 hover:border-red-500 cursor-pointer shadow-[0_0_12px_rgba(239,68,68,0.1)]'
+                                      : match.status === 'finished'
+                                      ? 'border-gray-900 hover:border-gray-700 cursor-pointer'
+                                      : 'border-gray-900'
+                                  }`}
+                                >
+                                  {/* Status badge centered at top */}
+                                  <div className="flex items-center justify-center mb-3">
+                                    {isLive ? (
+                                      <span className="text-[9px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-2 py-0.5 rounded border border-red-500/25 animate-pulse">
+                                        🔴 EN VIVO
+                                      </span>
+                                    ) : match.status === 'finished' ? (
+                                      <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/25">
+                                        FINALIZADO
+                                      </span>
+                                    ) : (
+                                      <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest bg-gray-500/10 px-2 py-0.5 rounded border border-gray-900">
+                                        PROGRAMADO
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Symmetrical Grid for teams and score */}
+                                  <div className="grid grid-cols-5 items-center py-1">
+                                    {/* Home team centered */}
+                                    <div className="col-span-2 flex flex-col items-center text-center">
+                                      <TeamLogo team={match.home_team} className="w-8 h-8" showText={true} />
+                                      <span className="text-[10px] font-black text-white mt-1.5 truncate max-w-full leading-tight">{match.home_team?.name}</span>
+                                    </div>
+
+                                    {/* Score / VS centered */}
+                                    <div className="col-span-1 flex flex-col items-center justify-center text-center">
+                                      {match.status === 'scheduled' ? (
+                                        <span className="text-[11px] font-black text-gray-500 uppercase">VS</span>
+                                      ) : (
+                                        <div className="flex items-center justify-center space-x-1">
+                                          <span className={`text-sm font-black ${match.home_score >= match.away_score ? 'text-white' : 'text-gray-500'}`}>
+                                            {match.home_score}
+                                          </span>
+                                          <span className="text-xs text-gray-600 font-bold">-</span>
+                                          <span className={`text-sm font-black ${match.away_score >= match.home_score ? 'text-white' : 'text-gray-500'}`}>
+                                            {match.away_score}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Away team centered */}
+                                    <div className="col-span-2 flex flex-col items-center text-center">
+                                      <TeamLogo team={match.away_team} className="w-8 h-8" showText={true} />
+                                      <span className="text-[10px] font-black text-white mt-1.5 truncate max-w-full leading-tight">{match.away_team?.name}</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Bottom scheduled time if exists */}
+                                  {match.scheduled_at && (
+                                    <div className="mt-3 pt-2 border-t border-gray-900/60 flex items-center justify-center text-[9px] text-gray-500 font-bold">
+                                      <span>
+                                        {new Date(match.scheduled_at).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </section>
 
