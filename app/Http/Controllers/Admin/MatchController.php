@@ -56,36 +56,52 @@ class MatchController extends Controller
 
     public function update(Request $request, Game $match)
     {
-        $rules = [
+        // Convert empty strings to null before validation to prevent date/exists rules from failing on ""
+        $input = array_map(function ($value) {
+            return $value === '' ? null : $value;
+        }, $request->all());
+
+        $validator = \Illuminate\Support\Facades\Validator::make($input, [
             'court' => 'nullable|string|max:150',
             'scheduled_at' => 'nullable|date',
-            'referee_id' => 'nullable|exists:referees,id',
-            'ref1_id' => 'nullable|exists:referees,id',
-            'ref2_id' => 'nullable|exists:referees,id',
+            'referee_id' => 'nullable',
+            'ref1_id' => 'nullable',
+            'ref2_id' => 'nullable',
             'home_score' => 'nullable|integer|min:0',
             'away_score' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:scheduled,live,finished',
             'stage' => 'nullable|string|max:50',
             'label' => 'nullable|string|max:100',
             'round' => 'nullable|integer|min:1',
-            'home_team_id' => 'nullable|exists:teams,id',
-            'away_team_id' => 'nullable|exists:teams,id',
-            'championship_id' => 'nullable|exists:championships,id',
+            'home_team_id' => 'nullable',
+            'away_team_id' => 'nullable',
+            'championship_id' => 'nullable',
             'group_name' => 'nullable|string|max:50',
-        ];
+        ]);
 
-        $data = $request->validate($rules);
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
-        // Filter out null values to avoid overwriting existing data
-        $data = array_filter($data, fn($v) => !is_null($v));
+        $validated = $validator->validated();
 
-        $match->update($data);
+        $updateData = [];
+        foreach ($validated as $key => $val) {
+            if (!is_null($val)) {
+                $updateData[$key] = $val;
+            }
+        }
+
+        $match->update($updateData);
 
         // Clear public home cache to reflect score/status updates immediately
         \Illuminate\Support\Facades\Cache::forget('public_home_data');
 
         return response()->json([
-            'message' => 'Partido actualizado.',
+            'message' => 'Partido actualizado con éxito.',
             'match' => $match->fresh()
         ]);
     }
