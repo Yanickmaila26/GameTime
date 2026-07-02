@@ -262,125 +262,67 @@ class MatchController extends Controller
 
     public function getTop3Leaders()
     {
-        $allPlayers = \App\Models\Player::with('team')->orderBy('name')->get();
+        $filePath = storage_path('app/custom_leaders.json');
+        if (file_exists($filePath)) {
+            $data = json_decode(file_get_contents($filePath), true);
+            if ($data && is_array($data)) {
+                return response()->json($data);
+            }
+        }
 
-        // 1. Scorers
-        $scorers = MatchPlayer::has('player')
-            ->selectRaw('player_id, SUM(points) as total')
-            ->groupBy('player_id')
-            ->orderByDesc('total')
-            ->take(3)
-            ->get();
+        // Default structure matching user's screenshots
+        $defaultData = [
+            'scorers' => [
+                ['id' => 1, 'name' => 'Mateo Flores', 'team' => 'Fenix BC', 'position' => 'BASE', 'avatar' => 'MF', 'total' => 126],
+                ['id' => 2, 'name' => 'Cristian Jimenez', 'team' => 'DM Basketball', 'position' => 'BASE', 'avatar' => 'CJ', 'total' => 105],
+                ['id' => 3, 'name' => 'Alex Zapata', 'team' => 'Team Salcedo', 'position' => 'BASE', 'avatar' => 'AZ', 'total' => 101],
+            ],
+            'threepointers' => [
+                ['id' => 1, 'name' => 'Joel Villagómez', 'team' => 'Fenix BC', 'position' => 'BASE', 'avatar' => 'JV', 'total' => 7],
+                ['id' => 2, 'name' => 'Basantes Mateo', 'team' => 'Golden Kings', 'position' => 'BASE', 'avatar' => 'BM', 'total' => 7],
+                ['id' => 3, 'name' => 'Ortega Francisco', 'team' => 'Ambato City', 'position' => 'BASE', 'avatar' => 'OF', 'total' => 5],
+            ],
+            'baskets' => [
+                ['id' => 1, 'name' => 'Fernandez Neomar', 'team' => 'Team TNT', 'position' => 'BASE', 'avatar' => 'FN', 'total' => 21],
+                ['id' => 2, 'name' => 'Alex Zapata', 'team' => 'Team Salcedo', 'position' => 'BASE', 'avatar' => 'AZ', 'total' => 19],
+                ['id' => 3, 'name' => 'Diesel Suarez', 'team' => 'Team TNT', 'position' => 'BASE', 'avatar' => 'DS', 'total' => 18],
+            ],
+            'foulers' => [
+                ['id' => 1, 'name' => 'Echeverria Mateo', 'team' => 'NPI', 'position' => 'BASE', 'avatar' => 'EM', 'total' => 21],
+                ['id' => 2, 'name' => 'Laverde Samuel', 'team' => 'NPI', 'position' => 'BASE', 'avatar' => 'LS', 'total' => 20],
+                ['id' => 3, 'name' => 'Ricardo Ortiz', 'team' => 'Cotopaxi Elite', 'position' => 'BASE', 'avatar' => 'RO', 'total' => 18],
+            ],
+        ];
 
-        // 2. Triples
-        $triples = MatchEvent::where('type', 'score3')
-            ->has('player')
-            ->selectRaw('player_id, COUNT(id) as total')
-            ->groupBy('player_id')
-            ->orderByDesc('total')
-            ->take(3)
-            ->get();
-
-        // 3. Baskets (Aros)
-        $baskets = MatchEvent::where('type', 'score2')
-            ->has('player')
-            ->selectRaw('player_id, COUNT(id) as total')
-            ->groupBy('player_id')
-            ->orderByDesc('total')
-            ->take(3)
-            ->get();
-
-        // 4. Fouls
-        $fouls = MatchPlayer::has('player')
-            ->selectRaw('player_id, SUM(fouls) as total')
-            ->groupBy('player_id')
-            ->orderByDesc('total')
-            ->take(3)
-            ->get();
-
-        return response()->json([
-            'all_players' => $allPlayers->map(fn($p) => [
-                'id' => $p->id,
-                'name' => $p->name,
-                'number' => $p->number,
-                'team_name' => $p->team?->name ?? 'Sin equipo'
-            ]),
-            'scorers' => $scorers,
-            'threepointers' => $triples,
-            'baskets' => $baskets,
-            'fouls' => $fouls,
-        ]);
+        return response()->json($defaultData);
     }
 
     public function saveTop3Leaders(Request $request)
     {
-        $data = $request->validate([
-            'category' => 'required|string|in:scorers,threepointers,baskets,fouls',
-            'items' => 'required|array|min:1|max:3',
-            'items.*.player_id' => 'required|exists:players,id',
-            'items.*.total' => 'required|integer|min:0',
-        ]);
+        $payload = $request->all();
 
-        $category = $data['category'];
-        $items = $data['items'];
-
-        foreach ($items as $item) {
-            $player = \App\Models\Player::find($item['player_id']);
-            if (!$player) continue;
-
-            $mp = MatchPlayer::where('player_id', $player->id)->first();
-            if (!$mp) {
-                $game = Game::where('home_team_id', $player->team_id)
-                    ->orWhere('away_team_id', $player->team_id)
-                    ->latest()
-                    ->first() ?? Game::latest()->first();
-                $gameId = $game?->id ?? 1;
-
-                $mp = MatchPlayer::create([
-                    'match_id' => $gameId,
-                    'player_id' => $player->id,
-                    'team_id' => $player->team_id,
-                    'points' => 0,
-                    'fouls' => 0,
-                    'is_ejected' => false,
-                ]);
-            }
-
-            if ($category === 'scorers') {
-                $mp->update(['points' => $item['total']]);
-            } elseif ($category === 'fouls') {
-                $mp->update(['fouls' => $item['total']]);
-            } elseif ($category === 'threepointers') {
-                MatchEvent::where('player_id', $player->id)->where('type', 'score3')->delete();
-                for ($i = 0; $i < $item['total']; $i++) {
-                    MatchEvent::create([
-                        'match_id' => $mp->match_id,
-                        'quarter' => 4,
-                        'type' => 'score3',
-                        'team_id' => $player->team_id,
-                        'player_id' => $player->id,
-                        'description' => 'Triple acumulado',
-                    ]);
-                }
-            } elseif ($category === 'baskets') {
-                MatchEvent::where('player_id', $player->id)->where('type', 'score2')->delete();
-                for ($i = 0; $i < $item['total']; $i++) {
-                    MatchEvent::create([
-                        'match_id' => $mp->match_id,
-                        'quarter' => 4,
-                        'type' => 'score2',
-                        'team_id' => $player->team_id,
-                        'player_id' => $player->id,
-                        'description' => 'Aro de campo acumulado',
-                    ]);
+        foreach (['scorers', 'threepointers', 'baskets', 'foulers'] as $cat) {
+            if (isset($payload[$cat]) && is_array($payload[$cat])) {
+                foreach ($payload[$cat] as $idx => &$item) {
+                    $item['id'] = $idx + 1;
+                    $words = explode(' ', trim($item['name'] ?? 'P'));
+                    $w1 = $words[0] ?? '';
+                    $w2 = $words[1] ?? '';
+                    $item['avatar'] = strtoupper(mb_substr($w1, 0, 1) . mb_substr($w2, 0, 1));
+                    $item['total'] = (int)($item['total'] ?? 0);
+                    $item['position'] = !empty($item['position']) ? $item['position'] : 'BASE';
+                    $item['team'] = !empty($item['team']) ? $item['team'] : 'Equipo';
                 }
             }
         }
 
+        $filePath = storage_path('app/custom_leaders.json');
+        @file_put_contents($filePath, json_encode($payload, JSON_PRETTY_PRINT));
         \Illuminate\Support\Facades\Cache::forget('public_home_data');
 
         return response()->json([
             'message' => 'Líderes actualizados correctamente.',
+            'data' => $payload
         ]);
     }
 

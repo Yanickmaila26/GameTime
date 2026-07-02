@@ -196,6 +196,47 @@ class PublicController extends Controller
             })
             ->values();
 
+        $customFilePath = storage_path('app/custom_leaders.json');
+        if (file_exists($customFilePath)) {
+            $customLeaders = json_decode(file_get_contents($customFilePath), true);
+            if ($customLeaders && is_array($customLeaders)) {
+                if (!empty($customLeaders['scorers'])) $scorers = collect($customLeaders['scorers']);
+                if (!empty($customLeaders['threepointers'])) $threepointers = collect($customLeaders['threepointers']);
+                if (!empty($customLeaders['baskets'])) $baskets = collect($customLeaders['baskets']);
+                if (!empty($customLeaders['foulers'])) $fouls = collect($customLeaders['foulers']);
+            }
+        } else {
+            // Default fallback if no database leaders exist yet
+            if ($scorers->isEmpty()) {
+                $scorers = collect([
+                    ['id' => 1, 'name' => 'Mateo Flores', 'team' => 'Fenix BC', 'position' => 'BASE', 'avatar' => 'MF', 'total' => 126],
+                    ['id' => 2, 'name' => 'Cristian Jimenez', 'team' => 'DM Basketball', 'position' => 'BASE', 'avatar' => 'CJ', 'total' => 105],
+                    ['id' => 3, 'name' => 'Alex Zapata', 'team' => 'Team Salcedo', 'position' => 'BASE', 'avatar' => 'AZ', 'total' => 101],
+                ]);
+            }
+            if ($threepointers->isEmpty()) {
+                $threepointers = collect([
+                    ['id' => 1, 'name' => 'Joel Villagómez', 'team' => 'Fenix BC', 'position' => 'BASE', 'avatar' => 'JV', 'total' => 7],
+                    ['id' => 2, 'name' => 'Basantes Mateo', 'team' => 'Golden Kings', 'position' => 'BASE', 'avatar' => 'BM', 'total' => 7],
+                    ['id' => 3, 'name' => 'Ortega Francisco', 'team' => 'Ambato City', 'position' => 'BASE', 'avatar' => 'OF', 'total' => 5],
+                ]);
+            }
+            if ($baskets->isEmpty()) {
+                $baskets = collect([
+                    ['id' => 1, 'name' => 'Fernandez Neomar', 'team' => 'Team TNT', 'position' => 'BASE', 'avatar' => 'FN', 'total' => 21],
+                    ['id' => 2, 'name' => 'Alex Zapata', 'team' => 'Team Salcedo', 'position' => 'BASE', 'avatar' => 'AZ', 'total' => 19],
+                    ['id' => 3, 'name' => 'Diesel Suarez', 'team' => 'Team TNT', 'position' => 'BASE', 'avatar' => 'DS', 'total' => 18],
+                ]);
+            }
+            if ($fouls->isEmpty()) {
+                $fouls = collect([
+                    ['id' => 1, 'name' => 'Echeverria Mateo', 'team' => 'NPI', 'position' => 'BASE', 'avatar' => 'EM', 'total' => 21],
+                    ['id' => 2, 'name' => 'Laverde Samuel', 'team' => 'NPI', 'position' => 'BASE', 'avatar' => 'LS', 'total' => 20],
+                    ['id' => 3, 'name' => 'Ricardo Ortiz', 'team' => 'Cotopaxi Elite', 'position' => 'BASE', 'avatar' => 'RO', 'total' => 18],
+                ]);
+            }
+        }
+
         $data = [
             'championship' => $activeChampionship,
             'liveMatches' => $liveMatches,

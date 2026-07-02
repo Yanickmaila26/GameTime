@@ -1,33 +1,32 @@
 import { useState, useEffect } from 'react'
 import AdminLayout from '../../Components/AdminLayout'
-import { Flame, Target, Disc, ShieldAlert, Check, Sparkles } from 'lucide-react'
+import { Flame, Target, Disc, ShieldAlert, Check, Sparkles, Save } from 'lucide-react'
 import { toastSuccess, toastError } from '../../lib/swal'
 
 export default function Stats() {
   const [loading, setLoading] = useState(true)
-  const [allPlayers, setAllPlayers] = useState([])
-  const [savingCategory, setSavingCategory] = useState(null)
+  const [saving, setSaving] = useState(false)
 
-  // Top 3 States
+  // Top 3 Manual Leaders State
   const [scorers, setScorers] = useState([
-    { player_id: '', total: 0 },
-    { player_id: '', total: 0 },
-    { player_id: '', total: 0 },
+    { name: 'Mateo Flores', team: 'Fenix BC', position: 'BASE', total: 126 },
+    { name: 'Cristian Jimenez', team: 'DM Basketball', position: 'BASE', total: 105 },
+    { name: 'Alex Zapata', team: 'Team Salcedo', position: 'BASE', total: 101 },
   ])
   const [threepointers, setThreepointers] = useState([
-    { player_id: '', total: 0 },
-    { player_id: '', total: 0 },
-    { player_id: '', total: 0 },
+    { name: 'Joel Villagómez', team: 'Fenix BC', position: 'BASE', total: 7 },
+    { name: 'Basantes Mateo', team: 'Golden Kings', position: 'BASE', total: 7 },
+    { name: 'Ortega Francisco', team: 'Ambato City', position: 'BASE', total: 5 },
   ])
   const [baskets, setBaskets] = useState([
-    { player_id: '', total: 0 },
-    { player_id: '', total: 0 },
-    { player_id: '', total: 0 },
+    { name: 'Fernandez Neomar', team: 'Team TNT', position: 'BASE', total: 21 },
+    { name: 'Alex Zapata', team: 'Team Salcedo', position: 'BASE', total: 19 },
+    { name: 'Diesel Suarez', team: 'Team TNT', position: 'BASE', total: 18 },
   ])
-  const [fouls, setFouls] = useState([
-    { player_id: '', total: 0 },
-    { player_id: '', total: 0 },
-    { player_id: '', total: 0 },
+  const [foulers, setFoulers] = useState([
+    { name: 'Echeverria Mateo', team: 'NPI', position: 'BASE', total: 21 },
+    { name: 'Laverde Samuel', team: 'NPI', position: 'BASE', total: 20 },
+    { name: 'Ricardo Ortiz', team: 'Cotopaxi Elite', position: 'BASE', total: 18 },
   ])
 
   const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
@@ -38,27 +37,21 @@ export default function Stats() {
       headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
     })
       .then(res => res.json())
-      .then(data => {
-        setAllPlayers(data.all_players || [])
-        
-        const pad3 = (arr) => {
-          const resArr = [
-            { player_id: '', total: 0 },
-            { player_id: '', total: 0 },
-            { player_id: '', total: 0 },
-          ]
-          (arr || []).forEach((item, idx) => {
-            if (idx < 3) {
-              resArr[idx] = { player_id: item.player_id || '', total: item.total || 0 }
-            }
-          })
-          return resArr
+      .then(d => {
+        const pad3 = (arr, defaults) => {
+          if (!arr || arr.length === 0) return defaults
+          return [0, 1, 2].map(i => ({
+            name: arr[i]?.name || defaults[i]?.name || '',
+            team: arr[i]?.team || defaults[i]?.team || '',
+            position: arr[i]?.position || defaults[i]?.position || 'BASE',
+            total: arr[i]?.total ?? defaults[i]?.total ?? 0,
+          }))
         }
 
-        setScorers(pad3(data.scorers))
-        setThreepointers(pad3(data.threepointers))
-        setBaskets(pad3(data.baskets))
-        setFouls(pad3(data.fouls))
+        setScorers(pad3(d.scorers, scorers))
+        setThreepointers(pad3(d.threepointers, threepointers))
+        setBaskets(pad3(d.baskets, baskets))
+        setFoulers(pad3(d.foulers, foulers))
       })
       .catch(() => toastError && toastError('Error al cargar líderes'))
       .finally(() => setLoading(false))
@@ -68,37 +61,34 @@ export default function Stats() {
     fetchLeaders()
   }, [])
 
-  const handleSaveCategory = (title, categoryKey, items) => {
-    const validItems = items.filter(i => i.player_id !== '')
-    if (validItems.length === 0) {
-      toastError && toastError('Selecciona al menos un jugador')
-      return
-    }
-
-    setSavingCategory(categoryKey)
+  const handleSaveAll = () => {
+    setSaving(true)
     fetch('/admin/lideres', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
-      body: JSON.stringify({ category: categoryKey, items: validItems }),
+      body: JSON.stringify({ scorers, threepointers, baskets, foulers }),
     })
       .then(res => { if (!res.ok) throw new Error(); return res.json() })
       .then(() => {
-        toastSuccess && toastSuccess(`Líderes de ${title} guardados correctamente`)
+        toastSuccess && toastSuccess('¡Todos los Líderes han sido guardados correctamente!')
         fetchLeaders()
       })
       .catch(() => toastError && toastError('Error al guardar'))
-      .finally(() => setSavingCategory(null))
+      .finally(() => setSaving(false))
   }
 
-  const updateItem = (setter, index, field, value) => {
+  const updateRow = (setter, index, field, value) => {
     setter(prev => {
       const updated = [...prev]
-      updated[index] = { ...updated[index], [field]: field === 'total' ? Number(value) : value }
+      updated[index] = {
+        ...updated[index],
+        [field]: field === 'total' ? Number(value) : value,
+      }
       return updated
     })
   }
 
-  const renderCard = (title, icon, categoryKey, items, setter, labelName, colorTheme) => (
+  const renderSection = (title, icon, items, setter, statLabel, colorTheme) => (
     <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-3xl p-5 space-y-4 shadow-xl">
       <div className="flex items-center justify-between border-b border-[#1a1a1a] pb-3">
         <h3 className={`text-xs font-black uppercase tracking-wider flex items-center space-x-2 ${colorTheme.text}`}>
@@ -112,56 +102,68 @@ export default function Stats() {
 
       <div className="space-y-3">
         {[0, 1, 2].map((idx) => (
-          <div key={idx} className="flex items-center space-x-3 bg-[#121212] border border-[#222] p-3 rounded-2xl">
-            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${
-              idx === 0 ? 'bg-amber-500 text-black' : idx === 1 ? 'bg-slate-400 text-black' : 'bg-amber-800 text-white'
-            }`}>
-              #{idx + 1}
-            </span>
-
-            <div className="flex-1">
-              <label className="block text-[9px] font-bold text-gray-500 uppercase mb-1">Jugador</label>
-              <select
-                value={items[idx]?.player_id || ''}
-                onChange={e => updateItem(setter, idx, 'player_id', e.target.value)}
-                className="w-full bg-[#090909] border border-[#222] text-white text-xs px-3 py-1.5 rounded-xl outline-none focus:border-orange-500 font-bold"
-              >
-                <option value="">-- Seleccionar jugador --</option>
-                {allPlayers.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.team_name}) #{p.number}
-                  </option>
-                ))}
-              </select>
+          <div key={idx} className="bg-[#121212] border border-[#222] p-3 rounded-2xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                idx === 0 ? 'bg-amber-500 text-black' : idx === 1 ? 'bg-slate-400 text-black' : 'bg-amber-800 text-white'
+              }`}>
+                Puesto #{idx + 1} {idx === 0 ? '(LÍDER)' : ''}
+              </span>
             </div>
 
-            <div className="w-24">
-              <label className="block text-[9px] font-bold text-gray-500 uppercase mb-1">{labelName}</label>
-              <input
-                type="number"
-                min={0}
-                value={items[idx]?.total || 0}
-                onChange={e => updateItem(setter, idx, 'total', e.target.value)}
-                className="w-full bg-[#090909] border border-[#222] text-white text-xs text-center py-1.5 rounded-xl outline-none focus:border-orange-500 font-bold"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+              <div>
+                <label className="block text-[9px] font-bold text-gray-500 uppercase mb-0.5">Nombre Jugador</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Mateo Flores"
+                  value={items[idx]?.name || ''}
+                  onChange={e => updateRow(setter, idx, 'name', e.target.value)}
+                  className="w-full bg-[#090909] border border-[#222] text-white text-xs px-3 py-1.5 rounded-xl outline-none focus:border-orange-500 font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[9px] font-bold text-gray-500 uppercase mb-0.5">Equipo</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Fenix BC"
+                  value={items[idx]?.team || ''}
+                  onChange={e => updateRow(setter, idx, 'team', e.target.value)}
+                  className="w-full bg-[#090909] border border-[#222] text-white text-xs px-3 py-1.5 rounded-xl outline-none focus:border-orange-500 font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[9px] font-bold text-gray-500 uppercase mb-0.5">Posición</label>
+                <input
+                  type="text"
+                  placeholder="BASE / ALERO / PÍVOT"
+                  value={items[idx]?.position || ''}
+                  onChange={e => updateRow(setter, idx, 'position', e.target.value)}
+                  className="w-full bg-[#090909] border border-[#222] text-white text-xs px-3 py-1.5 rounded-xl outline-none focus:border-orange-500 font-bold uppercase"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[9px] font-bold text-gray-500 uppercase mb-0.5">{statLabel}</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={items[idx]?.total || 0}
+                  onChange={e => updateRow(setter, idx, 'total', e.target.value)}
+                  className="w-full bg-[#090909] border border-[#222] text-white text-xs text-center py-1.5 rounded-xl outline-none focus:border-orange-500 font-extrabold"
+                />
+              </div>
             </div>
           </div>
         ))}
       </div>
-
-      <button
-        onClick={() => handleSaveCategory(title, categoryKey, items)}
-        disabled={savingCategory === categoryKey}
-        className={`w-full py-2.5 rounded-2xl font-bold text-xs flex items-center justify-center space-x-2 transition-all ${colorTheme.btn}`}
-      >
-        <Check className="w-4 h-4" />
-        <span>{savingCategory === categoryKey ? 'Guardando...' : `Guardar ${title}`}</span>
-      </button>
     </div>
   )
 
   return (
-    <AdminLayout title="Estadísticas de Líderes">
+    <AdminLayout title="Edición Directa de Líderes">
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1a1a1a] pb-5">
           <div>
@@ -170,9 +172,18 @@ export default function Stats() {
             </span>
             <h1 className="text-xl font-black text-white mt-1">Líderes de la Liga (Top 3)</h1>
             <p className="text-xs text-gray-500 mt-0.5">
-              Edita los valores del Top 3 en Anotadores, Triples, Aros y Faltas para que el cliente vea los datos exactos.
+              Escribe directamente el Nombre, Equipo, Posición y Puntos/Triples/Aros/Faltas para que aparezcan en el cliente.
             </p>
           </div>
+
+          <button
+            onClick={handleSaveAll}
+            disabled={saving}
+            className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-black text-xs font-black rounded-2xl shadow-lg hover:opacity-90 disabled:opacity-50 flex items-center space-x-2"
+          >
+            <Save className="w-4 h-4" />
+            <span>{saving ? 'Guardando Cambios...' : 'Guardar Todos los Líderes'}</span>
+          </button>
         </div>
 
         {loading ? (
@@ -181,56 +192,40 @@ export default function Stats() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {renderCard(
+            {renderSection(
               'Máximos Anotadores',
               <Flame className="w-4 h-4 text-orange-500" />,
-              'scorers',
               scorers,
               setScorers,
               'Puntos',
-              {
-                text: 'text-orange-400',
-                btn: 'bg-gradient-to-r from-orange-500 to-amber-600 text-black hover:opacity-90',
-              }
+              { text: 'text-orange-400' }
             )}
 
-            {renderCard(
+            {renderSection(
               'Líderes en Triples',
               <Target className="w-4 h-4 text-blue-400" />,
-              'threepointers',
               threepointers,
               setThreepointers,
               'Triples',
-              {
-                text: 'text-blue-400',
-                btn: 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:opacity-90',
-              }
+              { text: 'text-blue-400' }
             )}
 
-            {renderCard(
+            {renderSection(
               'Líderes en Aros de Campo',
               <Disc className="w-4 h-4 text-emerald-400" />,
-              'baskets',
               baskets,
               setBaskets,
               'Aros',
-              {
-                text: 'text-emerald-400',
-                btn: 'bg-gradient-to-r from-emerald-500 to-teal-600 text-black hover:opacity-90',
-              }
+              { text: 'text-emerald-400' }
             )}
 
-            {renderCard(
+            {renderSection(
               'Líderes en Faltas Personales',
               <ShieldAlert className="w-4 h-4 text-amber-400" />,
-              'fouls',
-              fouls,
-              setFouls,
+              foulers,
+              setFoulers,
               'Faltas',
-              {
-                text: 'text-amber-400',
-                btn: 'bg-gradient-to-r from-amber-500 to-yellow-600 text-black hover:opacity-90',
-              }
+              { text: 'text-amber-400' }
             )}
           </div>
         )}
