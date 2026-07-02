@@ -312,20 +312,36 @@ function ChampionshipModal({ championship, teams, onClose }) {
   )
 }
 
-function ManualMatchModal({ championship, onClose }) {
-  const { data, setData, post, processing, errors } = useForm({
-    home_team_id: '',
-    away_team_id: '',
-    round:        1,
-    stage:        'group',
-    label:        '',
-    court:        'Coliseo Principal',
-    scheduled_at: '',
+function ManualMatchModal({ championship, match = null, onClose }) {
+  const formatDatetimeLocal = (dtStr) => {
+    if (!dtStr) return '';
+    const date = new Date(dtStr);
+    if (isNaN(date.getTime())) return '';
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+    return localDate.toISOString().slice(0, 16);
+  };
+
+  const { data, setData, post, put, processing, errors } = useForm({
+    home_team_id: match?.home_team_id ?? '',
+    away_team_id: match?.away_team_id ?? '',
+    round:        match?.round ?? 1,
+    stage:        match?.stage ?? 'group',
+    label:        match?.label ?? '',
+    court:        match?.court ?? 'Coliseo Principal',
+    scheduled_at: match?.scheduled_at ? formatDatetimeLocal(match.scheduled_at) : '',
+    home_score:   match?.home_score ?? 0,
+    away_score:   match?.away_score ?? 0,
+    status:       match?.status ?? 'scheduled',
   })
 
   const submit = (e) => {
     e.preventDefault()
-    post(`/admin/campeonatos/${championship.id}/partido-manual`, { onSuccess: onClose })
+    if (match) {
+      put(`/admin/partidos/${match.id}`, { onSuccess: onClose })
+    } else {
+      post(`/admin/campeonatos/${championship.id}/partido-manual`, { onSuccess: onClose })
+    }
   }
 
   const selectClass = "w-full bg-[#121212] border border-[#222] text-white text-sm px-4 py-3 rounded-2xl outline-none focus:border-orange-500"
@@ -335,7 +351,7 @@ function ManualMatchModal({ championship, onClose }) {
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
       <div className="bg-[#0d0d0d] border border-[#222] rounded-3xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-sm font-black text-white">Agregar Partido Manual</h3>
+          <h3 className="text-sm font-black text-white">{match ? 'Editar Partido' : 'Agregar Partido Manual'}</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={submit} className="space-y-4">
@@ -386,9 +402,50 @@ function ManualMatchModal({ championship, onClose }) {
             </div>
           </div>
 
+          {match !== null && (
+            <div className="bg-[#121212] border border-[#222] rounded-2xl p-4 space-y-4">
+              <p className="text-[10px] font-black text-orange-500 uppercase tracking-wider">Resultado y Estado</p>
+              
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">🏠 Pts Local</label>
+                  <input 
+                    type="number" 
+                    min={0} 
+                    value={data.home_score} 
+                    onChange={e => setData('home_score', +e.target.value)} 
+                    className={inputClass} 
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">✈ Pts Vis</label>
+                  <input 
+                    type="number" 
+                    min={0} 
+                    value={data.away_score} 
+                    onChange={e => setData('away_score', +e.target.value)} 
+                    className={inputClass} 
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">🚦 Estado</label>
+                  <select 
+                    value={data.status} 
+                    onChange={e => setData('status', e.target.value)} 
+                    className={selectClass}
+                  >
+                    <option value="scheduled">Programado</option>
+                    <option value="live">En Vivo</option>
+                    <option value="finished">Finalizado</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
           <button type="submit" disabled={processing}
             className="w-full py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-black font-bold text-sm rounded-2xl disabled:opacity-50">
-            {processing ? 'Creando Partido...' : 'Crear Partido'}
+            {processing ? 'Guardando...' : (match ? 'Actualizar Partido' : 'Crear Partido')}
           </button>
         </form>
       </div>
@@ -705,11 +762,22 @@ export default function Championships({ championships, teams }) {
                                             <span className="text-[10px] text-white mt-1 font-bold">{match.away_team?.short_name}</span>
                                           </div>
                                         </div>
-                                        <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full ${
-                                          match.status === 'finished' ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-500/10 text-gray-400'
-                                        }`}>
-                                          {match.status === 'finished' ? 'Fin' : 'Prog'}
-                                        </span>
+                                        <div className="flex items-center space-x-2 ml-2">
+                                          <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full ${
+                                            match.status === 'finished' ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-500/10 text-gray-400'
+                                          }`}>
+                                            {match.status === 'finished' ? 'Fin' : 'Prog'}
+                                          </span>
+                                          {champ.status === 'active' && (
+                                            <button 
+                                              onClick={() => setManualMatchModal({ type: 'edit', championship: champ, match })}
+                                              className="p-1 text-gray-500 hover:text-white rounded hover:bg-[#222] transition-colors"
+                                              title="Editar partido de playoff"
+                                            >
+                                              <Edit2 className="w-3 h-3" />
+                                            </button>
+                                          )}
+                                        </div>
                                       </div>
                                     ))}
                                   </div>
@@ -724,7 +792,7 @@ export default function Championships({ championships, teams }) {
                     {/* Botón partido manual */}
                     {champ.status === 'active' && (
                       <div className="pt-4 border-t border-[#222] flex justify-end">
-                        <button onClick={() => setManualMatchModal(champ)}
+                        <button onClick={() => setManualMatchModal({ type: 'add', championship: champ })}
                           className="flex items-center space-x-1.5 px-3 py-2 bg-[#1a1a1a] hover:bg-[#222] border border-[#222] text-white text-xs font-bold rounded-xl transition-all">
                           <Plus className="w-3.5 h-3.5" />
                           <span>Agregar Partido Manual</span>
@@ -743,7 +811,7 @@ export default function Championships({ championships, teams }) {
         <ChampionshipModal championship={modal.championship} teams={teams} onClose={() => setModal(null)} />
       )}
       {manualMatchModal !== null && (
-        <ManualMatchModal championship={manualMatchModal} onClose={() => setManualMatchModal(null)} />
+        <ManualMatchModal championship={manualMatchModal.championship} match={manualMatchModal.match} onClose={() => setManualMatchModal(null)} />
       )}
       {activateModal !== null && (
         <ActivateModal

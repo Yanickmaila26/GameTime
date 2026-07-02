@@ -62,6 +62,11 @@ class MatchController extends Controller
             'referee_id' => 'nullable|exists:referees,id',
             'ref1_id' => 'nullable|exists:referees,id',
             'ref2_id' => 'nullable|exists:referees,id',
+            'home_score' => 'nullable|integer|min:0',
+            'away_score' => 'nullable|integer|min:0',
+            'status' => 'nullable|string|in:scheduled,live,finished',
+            'stage' => 'nullable|string|max:50',
+            'label' => 'nullable|string|max:100',
         ];
 
         if ($match->status === 'scheduled') {
@@ -76,9 +81,122 @@ class MatchController extends Controller
 
         $match->update($data);
 
+        // Clear public home cache to reflect score/status updates immediately
+        \Illuminate\Support\Facades\Cache::forget('public_home_data');
+
         return response()->json([
             'message' => 'Partido actualizado.',
             'match' => $match
+        ]);
+    }
+
+    public function getStats(Game $match)
+    {
+        $match->load(['homeTeam.players', 'awayTeam.players']);
+        
+        $matchPlayers = MatchPlayer::where('match_id', $match->id)
+            ->with('player')
+            ->get();
+            
+        // Get triples (count of score3 events per player)
+        $triples = MatchEvent::where('match_id', $match->id)
+            ->where('type', 'score3')
+            ->selectRaw('player_id, COUNT(id) as count')
+            ->groupBy('player_id')
+            ->pluck('count', 'player_id');
+            
+        $stats = $matchPlayers->map(function($mp) use ($triples) {
+            return [
+                'id' => $mp->id,
+                'player_id' => $mp->player_id,
+                'player_name' => $mp->player?->name ?? 'Jugador Desconocido',
+                'player_number' => $mp->player?->number ?? 'N/A',
+                'team_id' => $mp->team_id,
+                'points' => $mp->points,
+                'fouls' => $mp->fouls,
+                'triples' => $triples[$mp->player_id] ?? 0,
+                'is_ejected' => $mp->is_ejected,
+            ];
+        });
+        
+        return response()->json([
+            'match' => $match,
+            'stats' => $stats,
+            'home_players' => $match->homeTeam?->players ?? [],
+            'away_players' => $match->awayTeam?->players ?? [],
+        ]);
+    }
+
+    public function savePlayerStats(Request $request, Game $match)
+    {
+        $data = $request->validate([
+            'player_id' => 'required|exists:players,id',
+            'team_id' => 'required|exists:teams,id',
+            'points' => 'required|integer|min:0',
+            'fouls' => 'required|integer|min:0|max:5',
+            'triples' => 'required|integer|min:0',
+        ]);
+        
+        $mp = MatchPlayer::updateOrCreate(
+            ['match_id' => $match->id, 'player_id' => $data['player_id']],
+            [
+                'team_id' => $data['team_id'],
+                'points' => $data['points'],
+                'fouls' => $data['fouls'],
+                'is_ejected' => $data['fouls'] >= 5,
+            ]
+        );
+        
+        // Sync triples: delete old score3 events for this player and match, then create the new count of score3 events
+        MatchEvent::where('match_id', $match->id)
+            ->where('player_id', $data['player_id'])
+            ->where('type', 'score3')
+            ->delete();
+            
+        for ($i = 0; $i < $data['triples']; $i++) {
+            MatchEvent::create([
+                'match_id' => $match->id,
+                'quarter' => 4, // default to Q4 or just some placeholder quarter
+                'type' => 'score3',
+                'team_id' => $data['team_id'],
+                'player_id' => $data['player_id'],
+                'description' => 'Triple anotado (Estadísticas Individuales)',
+            ]);
+        }
+        
+        // Clear public home cache
+        \Illuminate\Support\Facades\Cache::forget('public_home_data');
+        
+        return response()->json([
+            'message' => 'Estadísticas del jugador guardadas correctamente.',
+            'stat' => [
+                'id' => $mp->id,
+                'player_id' => $mp->player_id,
+                'team_id' => $mp->team_id,
+                'points' => $mp->points,
+                'fouls' => $mp->fouls,
+                'triples' => $data['triples'],
+                'is_ejected' => $mp->is_ejected,
+            ]
+        ]);
+    }
+
+    public function deletePlayerStats(Game $match, $playerId)
+    {
+        MatchPlayer::where('match_id', $match->id)
+            ->where('player_id', $playerId)
+            ->delete();
+            
+        MatchEvent::where('match_id', $match->id)
+            ->where('player_id', $playerId)
+            ->where('type', 'score3')
+            ->delete();
+            
+        // Clear public home cache
+        \Illuminate\Support\Facades\Cache::forget('public_home_data');
+        
+        return response()->json([
+            'message' => 'Estadísticas del jugador eliminadas.'
         ]);
     }
 

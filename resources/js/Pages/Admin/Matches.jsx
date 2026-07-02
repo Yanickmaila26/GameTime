@@ -1,9 +1,9 @@
-import { useState } from 'react'
-import { useForm, Link } from '@inertiajs/react'
+import { useState, useEffect } from 'react'
+import { useForm, Link, router } from '@inertiajs/react'
 import AdminLayout from '../../Components/AdminLayout'
-import { Swords, Plus, Trash2, Edit2, X, Sparkles, Play, Calendar } from 'lucide-react'
+import { Swords, Plus, Trash2, Edit2, X, Sparkles, Play, Calendar, Users, BarChart3 } from 'lucide-react'
 import { TeamLogo } from './Teams'
-import { confirmDelete } from '../../lib/swal'
+import { confirmDelete, toastSuccess, toastError } from '../../lib/swal'
 
 const STATUS_LABEL = { scheduled: 'Programado', live: 'En Vivo', finished: 'Finalizado' }
 const STATUS_COLOR = {
@@ -163,8 +163,221 @@ function MatchModal({ match, championships, teams, referees, onClose }) {
   )
 }
 
+function MatchStatsModal({ match, onClose }) {
+  const [stats, setStats] = useState({ home: [], away: [] })
+  const [allPlayers, setAllPlayers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(null)
+  const [newPlayer, setNewPlayer] = useState({ team: 'home', player_id: '' })
+
+  const fetchStats = () => {
+    setLoading(true)
+    fetch(`/admin/partidos/${match.id}/estadisticas`, {
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    })
+      .then(res => res.json())
+      .then(data => {
+        setStats({ home: data.home || [], away: data.away || [] })
+        setAllPlayers(data.players || [])
+      })
+      .catch(() => toastError && toastError('Error al cargar estadísticas'))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { fetchStats() }, [])
+
+  const homePlayers = allPlayers.filter(p => p.team_id === match.home_team_id)
+  const awayPlayers = allPlayers.filter(p => p.team_id === match.away_team_id)
+
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+
+  const handleSave = (stat) => {
+    setSaving(stat.player_id)
+    fetch(`/admin/partidos/${match.id}/estadisticas`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+      body: JSON.stringify({ player_id: stat.player_id, points: stat.points, fouls: stat.fouls, triples: stat.triples }),
+    })
+      .then(res => { if (!res.ok) throw new Error(); return res.json() })
+      .then(() => { toastSuccess && toastSuccess('Estadística guardada'); fetchStats() })
+      .catch(() => toastError && toastError('Error al guardar'))
+      .finally(() => setSaving(null))
+  }
+
+  const handleDelete = (playerId) => {
+    confirmDelete('¿Eliminar estadística?', 'Se eliminará la estadística de este jugador en este partido.')
+      .then(result => {
+        if (result.isConfirmed) {
+          fetch(`/admin/partidos/${match.id}/estadisticas`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({ player_id: playerId }),
+          })
+            .then(res => { if (!res.ok) throw new Error(); return res.json() })
+            .then(() => { toastSuccess && toastSuccess('Estadística eliminada'); fetchStats() })
+            .catch(() => toastError && toastError('Error al eliminar'))
+        }
+      })
+  }
+
+  const handleAdd = () => {
+    if (!newPlayer.player_id) return
+    setSaving('adding')
+    fetch(`/admin/partidos/${match.id}/estadisticas`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+      body: JSON.stringify({ player_id: newPlayer.player_id, points: 0, fouls: 0, triples: 0 }),
+    })
+      .then(res => { if (!res.ok) throw new Error(); return res.json() })
+      .then(() => { toastSuccess && toastSuccess('Jugador agregado'); setNewPlayer({ team: 'home', player_id: '' }); fetchStats() })
+      .catch(() => toastError && toastError('Error al agregar jugador'))
+      .finally(() => setSaving(null))
+  }
+
+  const updateStat = (side, index, field, value) => {
+    setStats(prev => {
+      const updated = { ...prev }
+      updated[side] = [...updated[side]]
+      updated[side][index] = { ...updated[side][index], [field]: Number(value) }
+      return updated
+    })
+  }
+
+  const inputClass = "w-16 bg-[#121212] border border-[#222] text-white text-xs text-center px-1 py-1.5 rounded-lg outline-none focus:border-orange-500"
+
+  const renderTable = (side, teamName, playerStats) => (
+    <div className="space-y-2">
+      <h4 className="text-[10px] font-black text-orange-400 uppercase tracking-wider">{teamName}</h4>
+      {playerStats.length === 0 ? (
+        <p className="text-[10px] text-gray-500 italic">Sin estadísticas registradas</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-[#222]">
+                <th className="text-left text-[10px] font-bold text-gray-500 uppercase pb-2 pr-2">Jugador</th>
+                <th className="text-center text-[10px] font-bold text-gray-500 uppercase pb-2 px-1">Pts</th>
+                <th className="text-center text-[10px] font-bold text-gray-500 uppercase pb-2 px-1">Faltas</th>
+                <th className="text-center text-[10px] font-bold text-gray-500 uppercase pb-2 px-1">Triples</th>
+                <th className="text-center text-[10px] font-bold text-gray-500 uppercase pb-2 px-1">Acc</th>
+              </tr>
+            </thead>
+            <tbody>
+              {playerStats.map((stat, i) => (
+                <tr key={stat.player_id} className="border-b border-[#111] hover:bg-[#111]">
+                  <td className="py-2 pr-2">
+                    <span className="text-white font-bold text-[11px]">{stat.player_name}</span>
+                    <span className="text-gray-600 text-[9px] ml-1">#{stat.player_number}</span>
+                  </td>
+                  <td className="py-2 px-1 text-center">
+                    <input type="number" min={0} value={stat.points} onChange={e => updateStat(side, i, 'points', e.target.value)} className={inputClass} />
+                  </td>
+                  <td className="py-2 px-1 text-center">
+                    <input type="number" min={0} value={stat.fouls} onChange={e => updateStat(side, i, 'fouls', e.target.value)} className={inputClass} />
+                  </td>
+                  <td className="py-2 px-1 text-center">
+                    <input type="number" min={0} value={stat.triples} onChange={e => updateStat(side, i, 'triples', e.target.value)} className={inputClass} />
+                  </td>
+                  <td className="py-2 px-1 text-center">
+                    <div className="flex items-center space-x-1 justify-center">
+                      <button
+                        onClick={() => handleSave(stat)}
+                        disabled={saving === stat.player_id}
+                        className="px-2 py-1 bg-emerald-500/10 text-emerald-400 text-[9px] font-bold rounded-lg hover:bg-emerald-500/20 disabled:opacity-50"
+                      >
+                        {saving === stat.player_id ? '...' : '✓'}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(stat.player_id)}
+                        className="px-2 py-1 bg-red-500/10 text-red-400 text-[9px] font-bold rounded-lg hover:bg-red-500/20"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+
+  const availablePlayers = newPlayer.team === 'home' ? homePlayers : awayPlayers
+  const existingPlayerIds = [...stats.home, ...stats.away].map(s => s.player_id)
+  const filteredPlayers = availablePlayers.filter(p => !existingPlayerIds.includes(p.id))
+
+  return (
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+      <div className="bg-[#0d0d0d] border border-[#222] rounded-3xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-sm font-black text-white flex items-center space-x-2">
+              <BarChart3 className="w-4 h-4 text-orange-500" />
+              <span>Estadísticas Individuales</span>
+            </h3>
+            <p className="text-[10px] text-gray-500 mt-1">{match.home_team?.name} vs {match.away_team?.name}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {renderTable('home', match.home_team?.name || 'Local', stats.home)}
+            <hr className="border-[#222]" />
+            {renderTable('away', match.away_team?.name || 'Visitante', stats.away)}
+
+            <div className="bg-[#121212] border border-[#222] rounded-2xl p-4 space-y-3">
+              <p className="text-[10px] font-black text-orange-500 uppercase tracking-wider">Agregar Jugador</p>
+              <div className="flex items-end space-x-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-gray-500 uppercase">Equipo</label>
+                  <select
+                    value={newPlayer.team}
+                    onChange={e => setNewPlayer({ team: e.target.value, player_id: '' })}
+                    className="w-full bg-[#0d0d0d] border border-[#222] text-white text-xs px-3 py-2 rounded-xl outline-none focus:border-orange-500"
+                  >
+                    <option value="home">{match.home_team?.name || 'Local'}</option>
+                    <option value="away">{match.away_team?.name || 'Visitante'}</option>
+                  </select>
+                </div>
+                <div className="flex-1 space-y-1">
+                  <label className="text-[9px] font-bold text-gray-500 uppercase">Jugador</label>
+                  <select
+                    value={newPlayer.player_id}
+                    onChange={e => setNewPlayer(prev => ({ ...prev, player_id: e.target.value }))}
+                    className="w-full bg-[#0d0d0d] border border-[#222] text-white text-xs px-3 py-2 rounded-xl outline-none focus:border-orange-500"
+                  >
+                    <option value="">Seleccionar jugador...</option>
+                    {filteredPlayers.map(p => (
+                      <option key={p.id} value={p.id}>#{p.number} - {p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  onClick={handleAdd}
+                  disabled={!newPlayer.player_id || saving === 'adding'}
+                  className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-600 text-black text-xs font-bold rounded-xl disabled:opacity-50"
+                >
+                  {saving === 'adding' ? '...' : 'Agregar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Matches({ matches, championships, teams, referees }) {
   const [modal, setModal] = useState(null)
+  const [statsModal, setStatsModal] = useState(null)
   const { delete: destroy } = useForm()
 
   const deleteMatch = async (id) => {
@@ -240,6 +453,12 @@ export default function Matches({ matches, championships, teams, referees }) {
                       <span>En Vivo</span>
                     </Link>
                   )}
+                  {(match.status === 'finished' || match.status === 'live') && (
+                    <button onClick={() => setStatsModal(match)}
+                      className="p-2 text-gray-500 hover:text-purple-400 rounded-lg hover:bg-purple-950/20" title="Estadísticas individuales">
+                      <Users className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   <button onClick={() => setModal({ match })}
                     className="p-2 text-gray-500 hover:text-white rounded-lg hover:bg-[#222]">
                     <Edit2 className="w-3.5 h-3.5" />
@@ -257,6 +476,9 @@ export default function Matches({ matches, championships, teams, referees }) {
 
       {modal !== null && (
         <MatchModal match={modal.match} championships={championships} teams={teams} referees={referees} onClose={() => setModal(null)} />
+      )}
+      {statsModal !== null && (
+        <MatchStatsModal match={statsModal} onClose={() => setStatsModal(null)} />
       )}
     </AdminLayout>
   )

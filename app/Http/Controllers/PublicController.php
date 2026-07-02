@@ -72,7 +72,7 @@ class PublicController extends Controller
                 ->groupBy('player_id')
                 ->orderByDesc('total_points')
                 ->with(['player.team'])
-                ->take(3)
+                ->take(5)
                 ->get()
                 ->filter(fn($mp) => !is_null($mp->player))
                 ->map(function ($mp) {
@@ -95,7 +95,7 @@ class PublicController extends Controller
                 ->groupBy('player_id')
                 ->orderByDesc('total_triples')
                 ->with(['player.team'])
-                ->take(3)
+                ->take(5)
                 ->get()
                 ->filter(fn($me) => !is_null($me->player));
 
@@ -125,7 +125,7 @@ class PublicController extends Controller
                 ->groupBy('player_id')
                 ->orderByDesc('total_baskets')
                 ->with(['player.team'])
-                ->take(3)
+                ->take(5)
                 ->get()
                 ->filter(fn($me) => !is_null($me->player));
 
@@ -154,7 +154,7 @@ class PublicController extends Controller
                 ->groupBy('player_id')
                 ->orderByDesc('total_fouls')
                 ->with(['player.team'])
-                ->take(3)
+                ->take(5)
                 ->get()
                 ->filter(fn($mp) => !is_null($mp->player))
                 ->map(function ($mp) {

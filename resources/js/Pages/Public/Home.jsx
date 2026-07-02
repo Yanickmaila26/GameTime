@@ -608,7 +608,19 @@ export default function Home({ auth, championship, liveMatches: liveMatchesProp 
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {Object.entries(playoffRounds).map(([label, matches]) => (
+                      {Object.entries(playoffRounds)
+                        .sort((a, b) => {
+                          const getPlayoffOrder = (label) => {
+                            const l = label.toLowerCase();
+                            if (l.includes('cuarto')) return 1;
+                            if (l.includes('semi')) return 2;
+                            if (l.includes('tercer')) return 3;
+                            if (l.includes('final')) return 4;
+                            return 99;
+                          };
+                          return getPlayoffOrder(a[0]) - getPlayoffOrder(b[0]);
+                        })
+                        .map(([label, matches]) => (
                         <div key={label} className="space-y-3 border border-gray-900 bg-gray-950/20 backdrop-blur-md rounded-2xl p-4">
                           <div className="border-b border-gray-900 pb-2 mb-4 flex items-center justify-between">
                             <span className="text-xs font-black text-orange-400 uppercase tracking-wider">{label}</span>

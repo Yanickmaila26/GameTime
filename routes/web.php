@@ -46,6 +46,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,directiv
     Route::post('/partidos', [MatchController::class, 'store']);
     Route::put('/partidos/{match}', [MatchController::class, 'update']);
     Route::delete('/partidos/{match}', [MatchController::class, 'destroy']);
+    Route::get('/partidos/{match}/estadisticas', [MatchController::class, 'getStats']);
+    Route::post('/partidos/{match}/estadisticas', [MatchController::class, 'savePlayerStats']);
+    Route::delete('/partidos/{match}/estadisticas/{playerId}', [MatchController::class, 'deletePlayerStats']);
 
     // Partido en vivo
     Route::get('/partidos/{match}/live', [MatchController::class, 'live'])->name('match.live');
