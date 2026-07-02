@@ -751,7 +751,7 @@ export default function Championships({ championships, teams }) {
                                           </div>
                                           <div className="text-center font-bold px-2">
                                             <span className="text-xs text-gray-300">
-                                              {match.status === 'finished' ? `${match.home_score} - ${match.away_score}` : 'vs'}
+                                              {match.status === 'finished' || match.status === 'live' ? `${match.home_score} - ${match.away_score}` : 'vs'}
                                             </span>
                                             {match.status === 'live' && (
                                               <span className="block text-[8px] bg-red-600 text-white rounded px-1 animate-pulse uppercase">Vivo</span>
@@ -764,9 +764,11 @@ export default function Championships({ championships, teams }) {
                                         </div>
                                         <div className="flex items-center space-x-2 ml-2">
                                           <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full ${
-                                            match.status === 'finished' ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-500/10 text-gray-400'
+                                            match.status === 'finished' ? 'bg-blue-500/10 text-blue-400'
+                                            : match.status === 'live' ? 'bg-red-500/10 text-red-400'
+                                            : 'bg-gray-500/10 text-gray-400'
                                           }`}>
-                                            {match.status === 'finished' ? 'Fin' : 'Prog'}
+                                            {match.status === 'finished' ? 'Finalizado' : match.status === 'live' ? 'En Vivo' : 'Programado'}
                                           </span>
                                           {champ.status === 'active' && (
                                             <button 

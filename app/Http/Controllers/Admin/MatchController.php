@@ -67,17 +67,17 @@ class MatchController extends Controller
             'status' => 'nullable|string|in:scheduled,live,finished',
             'stage' => 'nullable|string|max:50',
             'label' => 'nullable|string|max:100',
+            'round' => 'nullable|integer|min:1',
+            'home_team_id' => 'nullable|exists:teams,id',
+            'away_team_id' => 'nullable|exists:teams,id',
+            'championship_id' => 'nullable|exists:championships,id',
+            'group_name' => 'nullable|string|max:50',
         ];
 
-        if ($match->status === 'scheduled') {
-            $rules['championship_id'] = 'required|exists:championships,id';
-            $rules['round']           = 'required|integer|min:1';
-            $rules['home_team_id']     = 'required|exists:teams,id|different:away_team_id';
-            $rules['away_team_id']     = 'required|exists:teams,id';
-            $rules['group_name']       = 'nullable|string|max:50';
-        }
-
         $data = $request->validate($rules);
+
+        // Filter out null values to avoid overwriting existing data
+        $data = array_filter($data, fn($v) => !is_null($v));
 
         $match->update($data);
 
@@ -86,7 +86,7 @@ class MatchController extends Controller
 
         return response()->json([
             'message' => 'Partido actualizado.',
-            'match' => $match
+            'match' => $match->fresh()
         ]);
     }
 
@@ -118,10 +118,23 @@ class MatchController extends Controller
                 'is_ejected' => $mp->is_ejected,
             ];
         });
+
+        // Split stats by team for the frontend
+        $homeStats = $stats->filter(fn($s) => $s['team_id'] == $match->home_team_id)->values();
+        $awayStats = $stats->filter(fn($s) => $s['team_id'] == $match->away_team_id)->values();
+
+        // Collect all players from both teams for the "add player" dropdown
+        $allPlayers = collect()
+            ->merge(($match->homeTeam?->players ?? collect())->map(fn($p) => ['id' => $p->id, 'name' => $p->name, 'number' => $p->number, 'team_id' => $match->home_team_id]))
+            ->merge(($match->awayTeam?->players ?? collect())->map(fn($p) => ['id' => $p->id, 'name' => $p->name, 'number' => $p->number, 'team_id' => $match->away_team_id]))
+            ->values();
         
         return response()->json([
             'match' => $match,
             'stats' => $stats,
+            'home' => $homeStats,
+            'away' => $awayStats,
+            'players' => $allPlayers,
             'home_players' => $match->homeTeam?->players ?? [],
             'away_players' => $match->awayTeam?->players ?? [],
         ]);
@@ -131,11 +144,21 @@ class MatchController extends Controller
     {
         $data = $request->validate([
             'player_id' => 'required|exists:players,id',
-            'team_id' => 'required|exists:teams,id',
+            'team_id' => 'nullable|exists:teams,id',
             'points' => 'required|integer|min:0',
-            'fouls' => 'required|integer|min:0|max:5',
+            'fouls' => 'required|integer|min:0',
             'triples' => 'required|integer|min:0',
         ]);
+
+        // Auto-resolve team_id if not provided
+        if (empty($data['team_id'])) {
+            $player = \App\Models\Player::find($data['player_id']);
+            $data['team_id'] = $player?->team_id;
+            // If still null, try to match from the match itself
+            if (empty($data['team_id'])) {
+                $data['team_id'] = $match->home_team_id;
+            }
+        }
         
         $mp = MatchPlayer::updateOrCreate(
             ['match_id' => $match->id, 'player_id' => $data['player_id']],
@@ -156,7 +179,7 @@ class MatchController extends Controller
         for ($i = 0; $i < $data['triples']; $i++) {
             MatchEvent::create([
                 'match_id' => $match->id,
-                'quarter' => 4, // default to Q4 or just some placeholder quarter
+                'quarter' => 4,
                 'type' => 'score3',
                 'team_id' => $data['team_id'],
                 'player_id' => $data['player_id'],
@@ -181,8 +204,15 @@ class MatchController extends Controller
         ]);
     }
 
-    public function deletePlayerStats(Game $match, $playerId)
+    public function deletePlayerStats(Request $request, Game $match, $playerId = null)
     {
+        // Support both URL parameter and request body
+        $playerId = $playerId ?? $request->input('player_id');
+        
+        if (!$playerId) {
+            return response()->json(['message' => 'player_id es requerido.'], 422);
+        }
+
         MatchPlayer::where('match_id', $match->id)
             ->where('player_id', $playerId)
             ->delete();
