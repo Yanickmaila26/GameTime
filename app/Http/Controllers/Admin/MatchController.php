@@ -262,6 +262,11 @@ class MatchController extends Controller
 
     public function getTop3Leaders()
     {
+        $cached = \Illuminate\Support\Facades\Cache::get('custom_leaders_store');
+        if ($cached && is_array($cached)) {
+            return response()->json($cached);
+        }
+
         $filePath = storage_path('app/custom_leaders.json');
         if (file_exists($filePath)) {
             $data = json_decode(file_get_contents($filePath), true);
@@ -324,8 +329,13 @@ class MatchController extends Controller
             }
         }
 
+        // Store persistently in global cache & disk
+        \Illuminate\Support\Facades\Cache::forever('custom_leaders_store', $payload);
+        \Illuminate\Support\Facades\Cache::forever('custom_leaders', $payload);
+        
         $filePath = storage_path('app/custom_leaders.json');
         @file_put_contents($filePath, json_encode($payload, JSON_PRETTY_PRINT));
+        
         \Illuminate\Support\Facades\Cache::forget('public_home_data');
 
         return response()->json([
