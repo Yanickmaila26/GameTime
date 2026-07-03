@@ -303,8 +303,7 @@ class MatchController extends Controller
 
         foreach (['scorers', 'threepointers', 'baskets', 'foulers'] as $cat) {
             if (isset($payload[$cat]) && is_array($payload[$cat])) {
-                foreach ($payload[$cat] as $idx => &$item) {
-                    $item['id'] = $idx + 1;
+                foreach ($payload[$cat] as &$item) {
                     $words = explode(' ', trim($item['name'] ?? 'P'));
                     $w1 = $words[0] ?? '';
                     $w2 = $words[1] ?? '';
@@ -313,6 +312,15 @@ class MatchController extends Controller
                     $item['position'] = !empty($item['position']) ? $item['position'] : 'BASE';
                     $item['team'] = !empty($item['team']) ? $item['team'] : 'Equipo';
                 }
+                unset($item);
+
+                // Auto-sort descending by total so higher values climb to #1 Leader
+                usort($payload[$cat], fn($a, $b) => ($b['total'] ?? 0) <=> ($a['total'] ?? 0));
+
+                foreach ($payload[$cat] as $idx => &$item) {
+                    $item['id'] = $idx + 1;
+                }
+                unset($item);
             }
         }
 

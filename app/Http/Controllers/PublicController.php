@@ -237,6 +237,12 @@ class PublicController extends Controller
             }
         }
 
+        // Always sort descending by total so the highest value is #1 Líder
+        $scorers = $scorers->sortByDesc(fn($item) => (int)($item['total'] ?? 0))->values();
+        $threepointers = $threepointers->sortByDesc(fn($item) => (int)($item['total'] ?? 0))->values();
+        $baskets = $baskets->sortByDesc(fn($item) => (int)($item['total'] ?? 0))->values();
+        $fouls = $fouls->sortByDesc(fn($item) => (int)($item['total'] ?? 0))->values();
+
         $data = [
             'championship' => $activeChampionship,
             'liveMatches' => $liveMatches,
