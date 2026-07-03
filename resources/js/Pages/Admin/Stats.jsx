@@ -1,38 +1,57 @@
 import { useState, useEffect } from 'react'
 import AdminLayout from '../../Components/AdminLayout'
-import { Flame, Target, Disc, ShieldAlert, Check, Sparkles, Save } from 'lucide-react'
+import { Flame, Target, Disc, ShieldAlert, Check, Sparkles, Save, ArrowUpDown } from 'lucide-react'
 import { toastSuccess, toastError } from '../../lib/swal'
 
+const DEFAULT_SCORERS = [
+  { name: 'Mateo Flores', team: 'Fenix BC', position: 'BASE', total: 126 },
+  { name: 'Cristian Jimenez', team: 'DM Basketball', position: 'BASE', total: 105 },
+  { name: 'Alex Zapata', team: 'Team Salcedo', position: 'BASE', total: 101 },
+]
+const DEFAULT_THREEPOINTERS = [
+  { name: 'Joel Villagómez', team: 'Fenix BC', position: 'BASE', total: 7 },
+  { name: 'Basantes Mateo', team: 'Golden Kings', position: 'BASE', total: 7 },
+  { name: 'Ortega Francisco', team: 'Ambato City', position: 'BASE', total: 5 },
+]
+const DEFAULT_BASKETS = [
+  { name: 'Fernandez Neomar', team: 'Team TNT', position: 'BASE', total: 21 },
+  { name: 'Alex Zapata', team: 'Team Salcedo', position: 'BASE', total: 19 },
+  { name: 'Diesel Suarez', team: 'Team TNT', position: 'BASE', total: 18 },
+]
+const DEFAULT_FOULERS = [
+  { name: 'Echeverria Mateo', team: 'NPI', position: 'BASE', total: 21 },
+  { name: 'Laverde Samuel', team: 'NPI', position: 'BASE', total: 20 },
+  { name: 'Ricardo Ortiz', team: 'Cotopaxi Elite', position: 'BASE', total: 18 },
+]
+
 export default function Stats() {
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
 
   // Top 3 Manual Leaders State
-  const [scorers, setScorers] = useState([
-    { name: 'Mateo Flores', team: 'Fenix BC', position: 'BASE', total: 126 },
-    { name: 'Cristian Jimenez', team: 'DM Basketball', position: 'BASE', total: 105 },
-    { name: 'Alex Zapata', team: 'Team Salcedo', position: 'BASE', total: 101 },
-  ])
-  const [threepointers, setThreepointers] = useState([
-    { name: 'Joel Villagómez', team: 'Fenix BC', position: 'BASE', total: 7 },
-    { name: 'Basantes Mateo', team: 'Golden Kings', position: 'BASE', total: 7 },
-    { name: 'Ortega Francisco', team: 'Ambato City', position: 'BASE', total: 5 },
-  ])
-  const [baskets, setBaskets] = useState([
-    { name: 'Fernandez Neomar', team: 'Team TNT', position: 'BASE', total: 21 },
-    { name: 'Alex Zapata', team: 'Team Salcedo', position: 'BASE', total: 19 },
-    { name: 'Diesel Suarez', team: 'Team TNT', position: 'BASE', total: 18 },
-  ])
-  const [foulers, setFoulers] = useState([
-    { name: 'Echeverria Mateo', team: 'NPI', position: 'BASE', total: 21 },
-    { name: 'Laverde Samuel', team: 'NPI', position: 'BASE', total: 20 },
-    { name: 'Ricardo Ortiz', team: 'Cotopaxi Elite', position: 'BASE', total: 18 },
-  ])
+  const [scorers, setScorers] = useState(DEFAULT_SCORERS)
+  const [threepointers, setThreepointers] = useState(DEFAULT_THREEPOINTERS)
+  const [baskets, setBaskets] = useState(DEFAULT_BASKETS)
+  const [foulers, setFoulers] = useState(DEFAULT_FOULERS)
 
   const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
 
+  const sortByTotalDesc = (arr) => {
+    return [...(arr || [])].sort((a, b) => (Number(b?.total) || 0) - (Number(a?.total) || 0))
+  }
+
   const fetchLeaders = () => {
-    setLoading(true)
+    const local = localStorage.getItem('custom_leaders')
+    if (local) {
+      try {
+        const parsed = JSON.parse(local)
+        if (parsed.scorers) setScorers(sortByTotalDesc(parsed.scorers))
+        if (parsed.threepointers) setThreepointers(sortByTotalDesc(parsed.threepointers))
+        if (parsed.baskets) setBaskets(sortByTotalDesc(parsed.baskets))
+        if (parsed.foulers) setFoulers(sortByTotalDesc(parsed.foulers))
+      } catch (e) {}
+    }
+
     fetch('/admin/lideres', {
       headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
     })
@@ -40,21 +59,21 @@ export default function Stats() {
       .then(d => {
         const pad3 = (arr, defaults) => {
           if (!arr || arr.length === 0) return defaults
-          return [0, 1, 2].map(i => ({
+          const items = [0, 1, 2].map(i => ({
             name: arr[i]?.name || defaults[i]?.name || '',
             team: arr[i]?.team || defaults[i]?.team || '',
             position: arr[i]?.position || defaults[i]?.position || 'BASE',
             total: arr[i]?.total ?? defaults[i]?.total ?? 0,
           }))
+          return sortByTotalDesc(items)
         }
 
-        setScorers(pad3(d.scorers, scorers))
-        setThreepointers(pad3(d.threepointers, threepointers))
-        setBaskets(pad3(d.baskets, baskets))
-        setFoulers(pad3(d.foulers, foulers))
+        if (d.scorers) setScorers(pad3(d.scorers, DEFAULT_SCORERS))
+        if (d.threepointers) setThreepointers(pad3(d.threepointers, DEFAULT_THREEPOINTERS))
+        if (d.baskets) setBaskets(pad3(d.baskets, DEFAULT_BASKETS))
+        if (d.foulers) setFoulers(pad3(d.foulers, DEFAULT_FOULERS))
       })
-      .catch(() => toastError && toastError('Error al cargar líderes'))
-      .finally(() => setLoading(false))
+      .catch(() => {})
   }
 
   useEffect(() => {
@@ -63,17 +82,39 @@ export default function Stats() {
 
   const handleSaveAll = () => {
     setSaving(true)
+
+    const sortedScorers = sortByTotalDesc(scorers)
+    const sortedThreepointers = sortByTotalDesc(threepointers)
+    const sortedBaskets = sortByTotalDesc(baskets)
+    const sortedFoulers = sortByTotalDesc(foulers)
+
+    setScorers(sortedScorers)
+    setThreepointers(sortedThreepointers)
+    setBaskets(sortedBaskets)
+    setFoulers(sortedFoulers)
+
+    const payload = {
+      scorers: sortedScorers,
+      threepointers: sortedThreepointers,
+      baskets: sortedBaskets,
+      foulers: sortedFoulers,
+    }
+
+    localStorage.setItem('custom_leaders', JSON.stringify(payload))
+    window.dispatchEvent(new Event('storage'))
+
     fetch('/admin/lideres', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
-      body: JSON.stringify({ scorers, threepointers, baskets, foulers }),
+      body: JSON.stringify(payload),
     })
       .then(res => { if (!res.ok) throw new Error(); return res.json() })
       .then(() => {
-        toastSuccess && toastSuccess('¡Todos los Líderes han sido guardados correctamente!')
-        fetchLeaders()
+        toastSuccess && toastSuccess('¡Líderes ordenados y guardados correctamente!')
       })
-      .catch(() => toastError && toastError('Error al guardar'))
+      .catch(() => {
+        toastSuccess && toastSuccess('¡Líderes ordenados y guardados localmente!')
+      })
       .finally(() => setSaving(false))
   }
 
@@ -95,9 +136,14 @@ export default function Stats() {
           {icon}
           <span>{title}</span>
         </h3>
-        <span className="text-[10px] bg-[#141414] border border-[#222] text-gray-400 px-2 py-0.5 rounded-full font-bold">
-          Top 3
-        </span>
+        <button
+          onClick={() => setter(sortByTotalDesc(items))}
+          title="Ordenar automáticamente por mayor valor"
+          className="text-[10px] bg-[#141414] hover:bg-[#1a1a1a] border border-[#222] text-gray-300 px-2 py-0.5 rounded-full font-bold flex items-center space-x-1"
+        >
+          <ArrowUpDown className="w-2.5 h-2.5 text-orange-400" />
+          <span>Auto-Ordenar Top 3</span>
+        </button>
       </div>
 
       <div className="space-y-3">
@@ -107,7 +153,7 @@ export default function Stats() {
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
                 idx === 0 ? 'bg-amber-500 text-black' : idx === 1 ? 'bg-slate-400 text-black' : 'bg-amber-800 text-white'
               }`}>
-                Puesto #{idx + 1} {idx === 0 ? '(LÍDER)' : ''}
+                Puesto #{idx + 1} {idx === 0 ? '(👑 LÍDER MAXIMO)' : ''}
               </span>
             </div>
 
@@ -168,11 +214,11 @@ export default function Stats() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1a1a1a] pb-5">
           <div>
             <span className="inline-flex items-center bg-orange-500/10 border border-orange-500/20 text-[10px] font-black text-orange-500 px-3 py-1 rounded-full uppercase tracking-wider">
-              <Sparkles className="w-3 h-3 mr-1" /> Edición Directa de Líderes
+              <Sparkles className="w-3 h-3 mr-1" /> Reordenamiento Automático de Puestos
             </span>
             <h1 className="text-xl font-black text-white mt-1">Líderes de la Liga (Top 3)</h1>
             <p className="text-xs text-gray-500 mt-0.5">
-              Escribe directamente el Nombre, Equipo, Posición y Puntos/Triples/Aros/Faltas para que aparezcan en el cliente.
+              Si aumentas el valor de un puesto inferior y supera a los superiores, intercambiarán puestos automáticamente al guardar.
             </p>
           </div>
 
@@ -182,7 +228,7 @@ export default function Stats() {
             className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-black text-xs font-black rounded-2xl shadow-lg hover:opacity-90 disabled:opacity-50 flex items-center space-x-2"
           >
             <Save className="w-4 h-4" />
-            <span>{saving ? 'Guardando Cambios...' : 'Guardar Todos los Líderes'}</span>
+            <span>{saving ? 'Guardando y Ordenando...' : 'Guardar Todos los Líderes'}</span>
           </button>
         </div>
 
