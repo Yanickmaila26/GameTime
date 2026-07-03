@@ -196,15 +196,19 @@ class PublicController extends Controller
             })
             ->values();
 
-        $customFilePath = storage_path('app/custom_leaders.json');
-        if (file_exists($customFilePath)) {
-            $customLeaders = json_decode(file_get_contents($customFilePath), true);
-            if ($customLeaders && is_array($customLeaders)) {
-                if (!empty($customLeaders['scorers'])) $scorers = collect($customLeaders['scorers']);
-                if (!empty($customLeaders['threepointers'])) $threepointers = collect($customLeaders['threepointers']);
-                if (!empty($customLeaders['baskets'])) $baskets = collect($customLeaders['baskets']);
-                if (!empty($customLeaders['foulers'])) $fouls = collect($customLeaders['foulers']);
+        $customLeaders = Cache::get('custom_leaders_store') ?? Cache::get('custom_leaders');
+        if (!$customLeaders) {
+            $customFilePath = storage_path('app/custom_leaders.json');
+            if (file_exists($customFilePath)) {
+                $customLeaders = json_decode(file_get_contents($customFilePath), true);
             }
+        }
+
+        if ($customLeaders && is_array($customLeaders)) {
+            if (!empty($customLeaders['scorers'])) $scorers = collect($customLeaders['scorers']);
+            if (!empty($customLeaders['threepointers'])) $threepointers = collect($customLeaders['threepointers']);
+            if (!empty($customLeaders['baskets'])) $baskets = collect($customLeaders['baskets']);
+            if (!empty($customLeaders['foulers'])) $fouls = collect($customLeaders['foulers']);
         } else {
             // Default fallback if no database leaders exist yet
             if ($scorers->isEmpty()) {
